@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -473,13 +474,67 @@ class _CollectDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Flexible(
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  item.body.isEmpty ? '（内容为空）' : item.body,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    height: 1.55,
-                    color: cs.onSurfaceVariant,
-                  ),
+              child: SelectionArea(
+                child: SingleChildScrollView(
+                  child: item.body.trim().isEmpty
+                      ? Text(
+                          '（内容为空）',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: 1.55,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        )
+                      : MarkdownBody(
+                          data: item.body,
+                          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                            p: theme.textTheme.bodyMedium?.copyWith(
+                              height: 1.55,
+                              color: cs.onSurfaceVariant,
+                            ),
+                            h1: GoogleFonts.newsreader(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onSurface,
+                            ),
+                            h2: GoogleFonts.newsreader(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onSurface,
+                            ),
+                            h3: GoogleFonts.newsreader(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onSurface,
+                            ),
+                            code: theme.textTheme.bodyMedium?.copyWith(
+                              fontFamily: 'monospace',
+                              color: cs.onSurface,
+                            ),
+                            codeblockPadding: const EdgeInsets.all(12),
+                            codeblockDecoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: cs.outlineVariant.withValues(alpha: 0.7),
+                              ),
+                            ),
+                            blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                            blockquoteDecoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border(
+                                left: BorderSide(
+                                  color: cs.primary.withValues(alpha: 0.65),
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            a: theme.textTheme.bodyMedium?.copyWith(
+                              color: cs.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
