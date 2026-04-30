@@ -1,0 +1,36 @@
+lib/collect/collect_cache.dart
+  e5e9495882c12df7 1-51
+lib/settings/settings_screen.dart
+  e5e9495882c12df7 6,24,100-131,271-286
+lib/collect/collect_screen.dart
+  e5e9495882c12df7 1-607
+lib/collect/collect_parser.dart
+  e5e9495882c12df7 1-36
+lib/collect/collect_models.dart
+  e5e9495882c12df7 1-27
+lib/collect/github_collect_repository.dart
+  e5e9495882c12df7 1-190
+lib/main.dart
+  e5e9495882c12df7 5,63,80-84,133-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.10",
+  "base_commit_sha": "c93d8eee262e4f7c527fd5edc52641eee9f1f61b",
+  "prompts": {
+    "e5e9495882c12df7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "873123e5-8d67-4c34-9bf6-30c31dcfb3ba",
+        "model": "default"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 978,
+      "total_deletions": 1,
+      "accepted_lines": 977,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/9ee960a3181dbf666aae342b65838294c58d9eddd21d389b5f77cd06f1635527"
+    }
+  }
+}
