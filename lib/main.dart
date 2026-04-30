@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'collect/collect_screen.dart';
 import 'diary/diary_screen.dart';
 
 Future<void> main() async {
@@ -59,6 +60,7 @@ class _HomeShellState extends State<HomeShell> {
         children: const [
           _HomeTab(),
           DiaryScreen(),
+          CollectScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -74,6 +76,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.book_outlined, color: cs.onSurfaceVariant),
             selectedIcon: Icon(Icons.auto_stories_rounded, color: cs.primary),
             label: '日记',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bookmark_outline, color: cs.onSurfaceVariant),
+            selectedIcon: Icon(Icons.bookmark_rounded, color: cs.primary),
+            label: '收藏',
           ),
         ],
       ),
@@ -118,6 +125,14 @@ class _HomeTab extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 '在底部切换到「日记」，从 GitHub 私有仓库阅读每日记录。',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '也可以切换到「收藏」，以 feed 流阅读 collect/ 目录里收藏的文字内容。',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.45,

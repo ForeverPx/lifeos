@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../config/token_store.dart';
+import '../collect/collect_cache.dart';
 import '../diary/diary_cache.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _clearingCache = false;
+  bool _clearingCollectCache = false;
   String? _savedHint;
 
   @override
@@ -92,6 +94,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } finally {
       if (mounted) setState(() => _clearingCache = false);
+    }
+  }
+
+  Future<void> _clearCollectCache() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清除收藏缓存？'),
+        content: const Text('将删除本地缓存的收藏内容，不会影响 GitHub 上的数据。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('清除'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() => _clearingCollectCache = true);
+    try {
+      final removed = await CollectCache.clearAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已清除 $removed 条收藏缓存')),
+      );
+    } finally {
+      if (mounted) setState(() => _clearingCollectCache = false);
     }
   }
 
@@ -233,6 +267,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               )
                             : const Icon(Icons.chevron_right),
                         onTap: _clearingCache ? null : _clearDiaryCache,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(
+                          Icons.delete_outline,
+                          color: cs.onSurfaceVariant,
+                        ),
+                        title: const Text('清除收藏缓存'),
+                        subtitle: const Text('删除已缓存的历史收藏内容'),
+                        trailing: _clearingCollectCache
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.chevron_right),
+                        onTap: _clearingCollectCache ? null : _clearCollectCache,
                       ),
                     ],
                   ),
