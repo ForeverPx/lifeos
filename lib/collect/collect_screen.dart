@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -28,12 +30,24 @@ class _CollectScreenState extends State<CollectScreen> {
   final List<DateTime> _days = [];
   final Map<DateTime, List<CollectItem>> _itemsByDay = {};
 
+  final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _query = '';
+  bool _searchExpanded = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTokenAndRefresh();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTokenAndRefresh() async {
@@ -123,6 +137,7 @@ class _CollectScreenState extends State<CollectScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final q = _query.trim().toLowerCase();
 
     if (kIsWeb) {
       return _WebCorsHint(cs: cs);
@@ -135,6 +150,27 @@ class _CollectScreenState extends State<CollectScreen> {
     if (!_repo.hasToken) {
       return _TokenHint(cs: cs, onOpenSettings: _openSettings);
     }
+
+    final hasQuery = q.isNotEmpty;
+    final loadedDayKeys = _itemsByDay.keys.toSet();
+    final filteredDays = hasQuery
+        ? _days.where((d) {
+            if (!loadedDayKeys.contains(d)) return false;
+            final items = _itemsByDay[d] ?? const <CollectItem>[];
+            return items.any((it) => _matchesQuery(it, q));
+          }).toList()
+        : _days;
+
+    final resultCount = hasQuery
+        ? filteredDays.fold<int>(
+            0,
+            (sum, d) =>
+                sum +
+                (_itemsByDay[d] ?? const <CollectItem>[])
+                    .where((it) => _matchesQuery(it, q))
+                    .length,
+          )
+        : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -169,6 +205,20 @@ class _CollectScreenState extends State<CollectScreen> {
                                 fontWeight: FontWeight.w600,
                                 color: cs.onSurface,
                               ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() => _searchExpanded = !_searchExpanded);
+                              if (!_searchExpanded) {
+                                _searchController.clear();
+                                _setQuery('');
+                              }
+                            },
+                            tooltip: _searchExpanded ? '收起搜索' : '搜索',
+                            icon: Icon(
+                              _searchExpanded ? Icons.search_off_outlined : Icons.search_outlined,
+                              color: cs.onSurfaceVariant,
                             ),
                           ),
                           IconButton(
@@ -211,12 +261,81 @@ class _CollectScreenState extends State<CollectScreen> {
                         )
                       else
                         Text(
-                          '下拉刷新 · 按日期展示收藏内容',
+                          hasQuery
+                              ? '搜索结果：${resultCount ?? 0} 条（仅搜索已加载内容）'
+                              : '下拉刷新 · 按日期展示收藏内容',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
                         ),
                     ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 180),
+                  crossFadeState:
+                      _searchExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                  firstChild: const SizedBox(height: 0),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: Material(
+                      color: cs.surface.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                        child: ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _searchController,
+                          builder: (context, value, _) {
+                            final hasText = value.text.trim().isNotEmpty;
+                            return TextField(
+                              controller: _searchController,
+                              textInputAction: TextInputAction.search,
+                              onChanged: _onSearchChanged,
+                              decoration: InputDecoration(
+                                hintText: '搜索标题 / 正文 / 文件名',
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: !hasText
+                                    ? IconButton(
+                                        tooltip: '收起',
+                                        onPressed: () {
+                                          setState(() => _searchExpanded = false);
+                                          _searchController.clear();
+                                          _setQuery('');
+                                        },
+                                        icon: const Icon(Icons.keyboard_arrow_up),
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            tooltip: '清空',
+                                            onPressed: () {
+                                              _searchController.clear();
+                                              _setQuery('');
+                                            },
+                                            icon: const Icon(Icons.close),
+                                          ),
+                                          IconButton(
+                                            tooltip: '收起',
+                                            onPressed: () {
+                                              setState(() => _searchExpanded = false);
+                                              _searchController.clear();
+                                              _setQuery('');
+                                            },
+                                            icon: const Icon(Icons.keyboard_arrow_up),
+                                          ),
+                                        ],
+                                      ),
+                                border: const OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -239,12 +358,12 @@ class _CollectScreenState extends State<CollectScreen> {
                     ),
                   ),
                 ),
-              if (_days.isEmpty && !_loading)
+              if (filteredDays.isEmpty && !_loading)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
                     child: Text(
-                      '还没有找到 collect/ 下的日期文件夹。',
+                      hasQuery ? '没有匹配的收藏内容。' : '还没有找到 collect/ 下的日期文件夹。',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
@@ -256,10 +375,15 @@ class _CollectScreenState extends State<CollectScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final day = _days[index];
-                      final items = _itemsByDay[day] ?? const <CollectItem>[];
+                      final day = filteredDays[index];
+                      final items = hasQuery
+                          ? (_itemsByDay[day] ?? const <CollectItem>[])
+                              .where((it) => _matchesQuery(it, q))
+                              .toList()
+                          : (_itemsByDay[day] ?? const <CollectItem>[]);
                       final isLoaded = _itemsByDay.containsKey(day);
-                      final isPlannedToLoad = index < 30;
+                      final originalIndex = _days.indexOf(day);
+                      final isPlannedToLoad = originalIndex != -1 && originalIndex < 30;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 18),
                         child: _DaySection(
@@ -270,7 +394,7 @@ class _CollectScreenState extends State<CollectScreen> {
                         ),
                       );
                     },
-                    childCount: _days.length,
+                    childCount: filteredDays.length,
                   ),
                 ),
               ),
@@ -279,6 +403,26 @@ class _CollectScreenState extends State<CollectScreen> {
         ),
       ),
     );
+  }
+
+  void _onSearchChanged(String _) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) return;
+      _setQuery(_searchController.text);
+    });
+  }
+
+  void _setQuery(String v) {
+    final next = v.trim();
+    if (next == _query) return;
+    setState(() => _query = next);
+  }
+
+  bool _matchesQuery(CollectItem item, String qLower) {
+    if (qLower.isEmpty) return true;
+    final hay = '${item.title}\n${item.fileName}\n${item.body}'.toLowerCase();
+    return hay.contains(qLower);
   }
 }
 
