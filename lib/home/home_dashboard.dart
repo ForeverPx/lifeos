@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -34,6 +35,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   List<DiaryEntry> _diaryToday = const [];
   List<CollectItem> _collectToday = const [];
+
+  /// Calendar day of the diary block shown (null if empty).
+  DateTime? _diarySummaryDay;
+
+  /// Calendar day of the collect list shown (null if empty).
+  DateTime? _collectSummaryDay;
 
   @override
   void initState() {
@@ -76,6 +83,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               setState(() {
                 _diaryToday = const [];
                 _collectToday = const [];
+                _diarySummaryDay = null;
+                _collectSummaryDay = null;
                 _summaryError = null;
               });
             }
@@ -105,9 +114,49 @@ class _HomeDashboardState extends State<HomeDashboard> {
         collectFuture,
       ]);
       if (!mounted) return;
+
+      var diaryEntries = pair[0] as List<DiaryEntry>;
+      var collectItems = pair[1] as List<CollectItem>;
+      DateTime? diaryDay;
+      DateTime? collectDay;
+
+      if (diaryEntries.isNotEmpty) {
+        diaryDay = today;
+      } else {
+        final latest = await _latestDiaryDayOnOrBefore(today);
+        if (latest != null) {
+          diaryEntries = await _diaryRepo.fetchDay(
+            latest.year,
+            latest.month,
+            latest.day,
+            allowNotFound: true,
+          );
+          if (diaryEntries.isNotEmpty) {
+            diaryDay = latest;
+            diaryEntries = [diaryEntries.last];
+          }
+        }
+      }
+
+      if (collectItems.isNotEmpty) {
+        collectDay = today;
+      } else {
+        final latest = await _latestCollectDayWithFilesOnOrBefore(today);
+        if (latest != null) {
+          collectItems = await _loadCollectForDay(latest);
+          if (collectItems.isNotEmpty) {
+            collectDay = latest;
+            collectItems = [collectItems.last];
+          }
+        }
+      }
+
+      if (!mounted) return;
       setState(() {
-        _diaryToday = pair[0] as List<DiaryEntry>;
-        _collectToday = pair[1] as List<CollectItem>;
+        _diaryToday = diaryEntries;
+        _collectToday = collectItems;
+        _diarySummaryDay = diaryDay;
+        _collectSummaryDay = collectDay;
         _loadingSummary = false;
       });
     } on GithubDiaryException catch (e) {
@@ -130,6 +179,39 @@ class _HomeDashboardState extends State<HomeDashboard> {
       });
     }
   }
+
+  /// Latest calendar day ≤ [today] that has a `daily_notes` entry file.
+  Future<DateTime?> _latestDiaryDayOnOrBefore(DateTime today) async {
+    var cursor = DateTime(today.year, today.month, 1);
+    for (var i = 0; i < 36; i++) {
+      final y = cursor.year;
+      final m = cursor.month;
+      final days = await _diaryRepo.listDaysWithEntries(y, m);
+      DateTime? best;
+      for (final d in days) {
+        final dt = DateTime(y, m, d);
+        if (dt.isAfter(today)) continue;
+        if (best == null || dt.isAfter(best)) best = dt;
+      }
+      if (best != null) return best;
+      cursor = DateTime(cursor.year, cursor.month - 1, 1);
+    }
+    return null;
+  }
+
+  /// Newest `collect/` day on or before [today] that contains at least one file.
+  Future<DateTime?> _latestCollectDayWithFilesOnOrBefore(DateTime today) async {
+    final days = await _collectRepo.listDays(limit: 120);
+    for (final day in days) {
+      if (day.isAfter(today)) continue;
+      final files = await _collectRepo.listFilesForDay(day);
+      if (files.isNotEmpty) return day;
+    }
+    return null;
+  }
+
+  bool _isSameCalendarDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<List<CollectItem>> _loadCollectForDay(DateTime day) async {
     final files = await _collectRepo.listFilesForDay(day);
@@ -170,6 +252,72 @@ class _HomeDashboardState extends State<HomeDashboard> {
     if (h < 14) return '中午好';
     if (h < 18) return '下午好';
     return '晚上好';
+  }
+
+  String _diarySectionLabel(DateTime today) {
+    if (_diaryToday.isEmpty) return '今日日记';
+    if (_diarySummaryDay != null && !_isSameCalendarDay(_diarySummaryDay!, today)) {
+      return '最近日记';
+    }
+    return '今日日记';
+  }
+
+  String? _diarySectionCaption(DateTime today) {
+    if (_diaryToday.isEmpty) return null;
+    if (_diarySummaryDay != null && !_isSameCalendarDay(_diarySummaryDay!, today)) {
+      return '今天暂无记录，以下为 ${DateFormat('y年M月d日', 'zh_CN').format(_diarySummaryDay!)} 最近一条';
+    }
+    return null;
+  }
+
+  String _collectSectionLabel(DateTime today) {
+    if (_collectToday.isEmpty) return '今日收藏';
+    if (_collectSummaryDay != null && !_isSameCalendarDay(_collectSummaryDay!, today)) {
+      return '最近收藏';
+    }
+    return '今日收藏';
+  }
+
+  String? _collectSectionCaption(DateTime today) {
+    if (_collectToday.isEmpty) return null;
+    if (_collectSummaryDay != null && !_isSameCalendarDay(_collectSummaryDay!, today)) {
+      return '今天暂无记录，以下为 ${DateFormat('y年M月d日', 'zh_CN').format(_collectSummaryDay!)} 最近一条';
+    }
+    return null;
+  }
+
+  bool _isRecentDiaryNotToday(DateTime today) =>
+      _diaryToday.isNotEmpty &&
+      _diarySummaryDay != null &&
+      !_isSameCalendarDay(_diarySummaryDay!, today);
+
+  bool _isRecentCollectNotToday(DateTime today) =>
+      _collectToday.isNotEmpty &&
+      _collectSummaryDay != null &&
+      !_isSameCalendarDay(_collectSummaryDay!, today);
+
+  void _openDiaryPreview(DiaryEntry entry) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.sizeOf(ctx).height * 0.88,
+        child: _DiaryEntryPreviewSheet(entry: entry),
+      ),
+    );
+  }
+
+  void _openCollectPreview(CollectItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.sizeOf(ctx).height * 0.88,
+        child: _CollectItemPreviewSheet(item: item),
+      ),
+    );
   }
 
   @override
@@ -267,22 +415,52 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           _ErrorBanner(message: _summaryError!, cs: cs),
                         ],
                         const SizedBox(height: 20),
-                        _SectionTitle(cs: cs, icon: Icons.auto_stories_outlined, label: '今日日记'),
+                        _SectionTitle(
+                          cs: cs,
+                          icon: Icons.auto_stories_outlined,
+                          label: _diarySectionLabel(today),
+                          caption: _diarySectionCaption(today),
+                        ),
                         const SizedBox(height: 10),
                         _DiaryTodayCard(
                           cs: cs,
                           theme: theme,
                           entries: _diaryToday,
-                          onOpenDiary: () => widget.onOpenTab(1),
+                          onTap: () {
+                            if (_diaryToday.isEmpty) {
+                              widget.onOpenTab(1);
+                              return;
+                            }
+                            if (_isRecentDiaryNotToday(today)) {
+                              _openDiaryPreview(_diaryToday.first);
+                              return;
+                            }
+                            widget.onOpenTab(1);
+                          },
                         ),
                         const SizedBox(height: 20),
-                        _SectionTitle(cs: cs, icon: Icons.bookmark_outline, label: '今日收藏'),
+                        _SectionTitle(
+                          cs: cs,
+                          icon: Icons.bookmark_outline,
+                          label: _collectSectionLabel(today),
+                          caption: _collectSectionCaption(today),
+                        ),
                         const SizedBox(height: 10),
                         _CollectTodayCard(
                           cs: cs,
                           theme: theme,
                           items: _collectToday,
-                          onOpenCollect: () => widget.onOpenTab(2),
+                          onTap: () {
+                            if (_collectToday.isEmpty) {
+                              widget.onOpenTab(2);
+                              return;
+                            }
+                            if (_isRecentCollectNotToday(today)) {
+                              _openCollectPreview(_collectToday.first);
+                              return;
+                            }
+                            widget.onOpenTab(2);
+                          },
                         ),
                         const SizedBox(height: 28),
                         Text(
@@ -402,26 +580,44 @@ class _SectionTitle extends StatelessWidget {
     required this.cs,
     required this.icon,
     required this.label,
+    this.caption,
   });
 
   final ColorScheme cs;
   final IconData icon;
   final String label;
+  final String? caption;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 22, color: cs.primary),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.newsreader(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface,
-          ),
+        Row(
+          children: [
+            Icon(icon, size: 22, color: cs.primary),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.newsreader(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+          ],
         ),
+        if (caption != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            caption!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.4,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -467,13 +663,13 @@ class _DiaryTodayCard extends StatelessWidget {
     required this.cs,
     required this.theme,
     required this.entries,
-    required this.onOpenDiary,
+    required this.onTap,
   });
 
   final ColorScheme cs;
   final ThemeData theme;
   final List<DiaryEntry> entries;
-  final VoidCallback onOpenDiary;
+  final VoidCallback onTap;
 
   String _subtitle(DiaryEntry e) {
     final parts = <String>[];
@@ -497,7 +693,7 @@ class _DiaryTodayCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onOpenDiary,
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: entries.isEmpty
@@ -554,13 +750,13 @@ class _CollectTodayCard extends StatelessWidget {
     required this.cs,
     required this.theme,
     required this.items,
-    required this.onOpenCollect,
+    required this.onTap,
   });
 
   final ColorScheme cs;
   final ThemeData theme;
   final List<CollectItem> items;
-  final VoidCallback onOpenCollect;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -570,7 +766,7 @@ class _CollectTodayCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onOpenCollect,
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: items.isEmpty
@@ -619,6 +815,220 @@ class _CollectTodayCard extends StatelessWidget {
                   ],
                 ),
         ),
+      ),
+    );
+  }
+}
+
+MarkdownStyleSheet _homeMarkdownSheet(ThemeData theme, ColorScheme cs) {
+  return MarkdownStyleSheet.fromTheme(theme).copyWith(
+    p: theme.textTheme.bodyMedium?.copyWith(
+      height: 1.55,
+      color: cs.onSurfaceVariant,
+    ),
+    h1: GoogleFonts.newsreader(
+      fontSize: 26,
+      fontWeight: FontWeight.w700,
+      color: cs.onSurface,
+    ),
+    h2: GoogleFonts.newsreader(
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      color: cs.onSurface,
+    ),
+    h3: GoogleFonts.newsreader(
+      fontSize: 18,
+      fontWeight: FontWeight.w700,
+      color: cs.onSurface,
+    ),
+    code: theme.textTheme.bodyMedium?.copyWith(
+      fontFamily: 'monospace',
+      color: cs.onSurface,
+    ),
+    codeblockPadding: const EdgeInsets.all(12),
+    codeblockDecoration: BoxDecoration(
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: cs.outlineVariant.withValues(alpha: 0.7),
+      ),
+    ),
+    blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+    blockquoteDecoration: BoxDecoration(
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(12),
+      border: Border(
+        left: BorderSide(
+          color: cs.primary.withValues(alpha: 0.65),
+          width: 3,
+        ),
+      ),
+    ),
+    a: theme.textTheme.bodyMedium?.copyWith(
+      color: cs.primary,
+      decoration: TextDecoration.underline,
+    ),
+  );
+}
+
+class _DiaryEntryPreviewSheet extends StatelessWidget {
+  const _DiaryEntryPreviewSheet({required this.entry});
+
+  final DiaryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final bodyMd = entry.source.trim();
+
+    return Material(
+      color: cs.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.title.isEmpty ? '未命名' : entry.title,
+                    style: GoogleFonts.newsreader(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: '关闭',
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          if (entry.headerLine.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                entry.headerLine,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          if (entry.tags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: entry.tags
+                    .map(
+                      (t) => Chip(
+                        label: Text(t),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        labelStyle: theme.textTheme.labelSmall,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          Expanded(
+            child: SelectionArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: bodyMd.isEmpty
+                    ? Text(
+                        '（暂无 source 正文）',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.55,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data: bodyMd,
+                        styleSheet: _homeMarkdownSheet(theme, cs),
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectItemPreviewSheet extends StatelessWidget {
+  const _CollectItemPreviewSheet({required this.item});
+
+  final CollectItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Material(
+      color: cs.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: GoogleFonts.newsreader(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: '关闭',
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              item.path,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: SelectionArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: item.body.trim().isEmpty
+                    ? Text(
+                        '（内容为空）',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.55,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data: item.body,
+                        styleSheet: _homeMarkdownSheet(theme, cs),
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
