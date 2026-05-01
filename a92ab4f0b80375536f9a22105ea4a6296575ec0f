@@ -1,0 +1,56 @@
+lib/main.dart
+  e5e9495882c12df7 67-75,79-87,89-92,94-99
+  6229c4480bb9f34a 7,61-64
+lib/diary/diary_screen.dart
+  93ab4d5dab0beb43 71,87,94,142
+lib/diary/github_diary_repository.dart
+  93ab4d5dab0beb43 45,92-100,102,107-111,113-114,116-121,123,125-130,132
+lib/home/home_dashboard.dart
+  6229c4480bb9f34a 1-738
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.10",
+  "base_commit_sha": "a92ab4f0b80375536f9a22105ea4a6296575ec0f",
+  "prompts": {
+    "6229c4480bb9f34a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "95ce0060-3b4f-4b5d-aaa5-f61f9f196cc7",
+        "model": "default"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 750,
+      "total_deletions": 69,
+      "accepted_lines": 743,
+      "overriden_lines": 0
+    },
+    "93ab4d5dab0beb43": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019de3a3-145e-72c3-a4ac-a3bcfbf2a7ed",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 46,
+      "accepted_lines": 37,
+      "overriden_lines": 0
+    },
+    "e5e9495882c12df7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "873123e5-8d67-4c34-9bf6-30c31dcfb3ba",
+        "model": "default"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 33,
+      "total_deletions": 21,
+      "accepted_lines": 33,
+      "overriden_lines": 0
+    }
+  }
+}
