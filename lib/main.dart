@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'collect/collect_screen.dart';
 import 'diary/diary_screen.dart';
+import 'home/home_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,91 +58,45 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [
-          _HomeTab(),
-          DiaryScreen(),
-          CollectScreen(),
+        children: [
+          HomeDashboard(onOpenTab: (i) => setState(() => _index = i)),
+          const DiaryScreen(),
+          const CollectScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined, color: cs.onSurfaceVariant),
-            selectedIcon: Icon(Icons.home_rounded, color: cs.primary),
-            label: '首页',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.book_outlined, color: cs.onSurfaceVariant),
-            selectedIcon: Icon(Icons.auto_stories_rounded, color: cs.primary),
-            label: '日记',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_outline, color: cs.onSurfaceVariant),
-            selectedIcon: Icon(Icons.bookmark_rounded, color: cs.primary),
-            label: '收藏',
-          ),
-        ],
-      ),
+      bottomNavigationBar: MediaQuery.textScalerOf(context).scale(1) > 1.15
+          ? _buildNavBar(cs)
+          : NavigationBarTheme(
+              data: NavigationBarThemeData(
+                height: 56,
+                labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+              ),
+              child: _buildNavBar(cs),
+            ),
     );
   }
-}
 
-class _HomeTab extends StatelessWidget {
-  const _HomeTab();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            cs.primaryContainer.withValues(alpha: 0.35),
-            cs.surface,
-          ],
+  Widget _buildNavBar(ColorScheme cs) {
+    return NavigationBar(
+      selectedIndex: _index,
+      onDestinationSelected: (i) => setState(() => _index = i),
+      destinations: [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined, color: cs.onSurfaceVariant),
+          selectedIcon: Icon(Icons.home_rounded, color: cs.primary),
+          label: '首页',
         ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'LifeOS',
-                style: GoogleFonts.newsreader(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '在底部切换到「日记」，从 GitHub 私有仓库阅读每日记录。',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '也可以切换到「收藏」，以 feed 流阅读 collect/ 目录里收藏的文字内容。',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ),
+        NavigationDestination(
+          icon: Icon(Icons.book_outlined, color: cs.onSurfaceVariant),
+          selectedIcon: Icon(Icons.auto_stories_rounded, color: cs.primary),
+          label: '日记',
         ),
-      ),
+        NavigationDestination(
+          icon: Icon(Icons.bookmark_outline, color: cs.onSurfaceVariant),
+          selectedIcon: Icon(Icons.bookmark_rounded, color: cs.primary),
+          label: '收藏',
+        ),
+      ],
     );
   }
 }

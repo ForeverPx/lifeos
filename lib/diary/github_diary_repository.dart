@@ -36,37 +36,13 @@ class GithubDiaryRepository {
     );
   }
 
-  String _apiMessage(String body) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final msg = decoded['message'] as String?;
-        if (msg != null && msg.trim().isNotEmpty) {
-          return msg.trim();
-        }
-      }
-    } catch (_) {
-      // Ignore parse errors and fallback to raw body.
-    }
-    final raw = body.trim();
-    if (raw.isEmpty) return 'unknown';
-    return raw.length > 120 ? '${raw.substring(0, 120)}...' : raw;
-  }
-
   /// Returns which days in [year]-[month] have a `.md` file (1–31).
   Future<Set<int>> listDaysWithEntries(int year, int month) async {
     final m = month.toString().padLeft(2, '0');
     final uri = _contentsUri('$basePrefix/$year/$m');
     final res = await http.get(uri, headers: _headers);
     if (res.statusCode == 404) {
-      if (_token.isNotEmpty) {
-        throw GithubDiaryException(
-          '无法访问日记目录：可能 token 无权限或仓库不可用（404）'
-          ' · ${_apiMessage(res.body)}',
-          statusCode: res.statusCode,
-          body: res.body,
-        );
-      }
+      // Month directory not existing is expected when there are no entries yet.
       return {};
     }
     if (res.statusCode != 200) {
@@ -113,53 +89,47 @@ class GithubDiaryRepository {
 
     final y = year.toString();
     final m = month.toString().padLeft(2, '0');
-    final d = day.toString().padLeft(2, '0');
-    final uri = _contentsUri('$basePrefix/$y/$m/$d.md');
-    final res = await http.get(uri, headers: _headers);
-    if (res.statusCode == 404) {
-      if (allowNotFound) return [];
-      if (_token.isNotEmpty && assumeExists) {
+    final dPadded = day.toString().padLeft(2, '0');
+    final dRaw = day.toString();
+    final fileNames = <String>{'$dPadded.md', '$dRaw.md'}.toList();
+
+    for (final fileName in fileNames) {
+      final uri = _contentsUri('$basePrefix/$y/$m/$fileName');
+      final res = await http.get(uri, headers: _headers);
+      if (res.statusCode == 404) continue;
+      if (res.statusCode != 200) {
         throw GithubDiaryException(
-          '读取失败：文件可能存在但无法访问（404），'
-          '请检查 token 是否有仓库读取权限 · ${_apiMessage(res.body)}',
+          '读取日记失败 (${res.statusCode})',
           statusCode: res.statusCode,
           body: res.body,
         );
       }
-      if (_token.isNotEmpty) {
-        throw GithubDiaryException(
-          '读取日记失败（404）：该日期可能没有文件，'
-          '或当前 token 无法访问该文件 · ${_apiMessage(res.body)}',
-          statusCode: res.statusCode,
-          body: res.body,
-        );
+      final map = jsonDecode(res.body) as Map<String, dynamic>;
+      final encoding = map['encoding'] as String?;
+      final content = map['content'] as String?;
+      if (encoding != 'base64' || content == null) {
+        throw const GithubDiaryException('意外的 API 响应格式');
       }
-      return [];
+      final bytes = base64.decode(
+        content.replaceAll('\n', ''),
+      );
+      final text = utf8.decode(bytes);
+      await DiaryCache.setDayMarkdown(
+        year: year,
+        month: month,
+        day: day,
+        markdown: text,
+      );
+      return parseDiaryMarkdown(text);
     }
-    if (res.statusCode != 200) {
-      throw GithubDiaryException(
-        '读取日记失败 (${res.statusCode})',
-        statusCode: res.statusCode,
-        body: res.body,
+
+    if (allowNotFound) return [];
+    if (assumeExists) {
+      throw const GithubDiaryException(
+        '索引显示该日期有日记，但文件未找到（404）。请刷新月份或检查该日文件命名。',
       );
     }
-    final map = jsonDecode(res.body) as Map<String, dynamic>;
-    final encoding = map['encoding'] as String?;
-    final content = map['content'] as String?;
-    if (encoding != 'base64' || content == null) {
-      throw const GithubDiaryException('意外的 API 响应格式');
-    }
-    final bytes = base64.decode(
-      content.replaceAll('\n', ''),
-    );
-    final text = utf8.decode(bytes);
-    await DiaryCache.setDayMarkdown(
-      year: year,
-      month: month,
-      day: day,
-      markdown: text,
-    );
-    return parseDiaryMarkdown(text);
+    return [];
   }
 }
 

@@ -68,6 +68,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     setState(() {
       _loadingMonth = true;
       _error = null;
+      _daysWithEntries = {};
     });
     try {
       final days = await _repo.listDaysWithEntries(
@@ -83,12 +84,14 @@ class _DiaryScreenState extends State<DiaryScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.message;
+        _daysWithEntries = {};
         _loadingMonth = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _daysWithEntries = {};
         _loadingMonth = false;
       });
     }
@@ -136,6 +139,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     setState(() {
       _visibleMonth = d;
       _selectedDay = null;
+      _daysWithEntries = {};
       _entries = [];
     });
     _loadMonth();
