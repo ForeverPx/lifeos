@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
 import '../collect/collect_models.dart';
@@ -297,24 +297,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
       !_isSameCalendarDay(_collectSummaryDay!, today);
 
   void _openDiaryPreview(DiaryEntry entry) {
-    showModalBottomSheet<void>(
+    showFSheet<void>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.sizeOf(ctx).height * 0.88,
+      side: FLayout.btt,
+      mainAxisMaxRatio: 0.88,
+      builder: (ctx) => ColoredBox(
+        color: FTheme.of(ctx).colors.background,
         child: _DiaryEntryPreviewSheet(entry: entry),
       ),
     );
   }
 
   void _openCollectPreview(CollectItem item) {
-    showModalBottomSheet<void>(
+    showFSheet<void>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.sizeOf(ctx).height * 0.88,
+      side: FLayout.btt,
+      mainAxisMaxRatio: 0.88,
+      builder: (ctx) => ColoredBox(
+        color: FTheme.of(ctx).colors.background,
         child: _CollectItemPreviewSheet(item: item),
       ),
     );
@@ -322,27 +322,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
     if (kIsWeb) {
-      return _DecoratedShell(
-        cs: cs,
-        child: const _WebCorsHintBody(),
+      return const _DecoratedShell(
+        child: _WebCorsHintBody(),
       );
     }
 
     if (_loadingToken) {
-      return _DecoratedShell(
-        cs: cs,
-        child: const Center(child: CircularProgressIndicator()),
+      return const _DecoratedShell(
+        child: Center(child: FCircularProgress()),
       );
     }
 
     if (!_diaryRepo.hasToken) {
       return _DecoratedShell(
-        cs: cs,
-        child: _TokenHintBody(cs: cs, onOpenSettings: _openSettings),
+        child: _TokenHintBody(onOpenSettings: _openSettings),
       );
     }
 
@@ -350,7 +347,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final dateLine = DateFormat('y年M月d日 EEEE', 'zh_CN').format(today);
 
     return _DecoratedShell(
-      cs: cs,
       child: Stack(
         children: [
           RefreshIndicator(
@@ -373,58 +369,55 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 children: [
                                   Text(
                                     'LifeOS',
-                                    style: GoogleFonts.newsreader(
-                                      fontSize: 32,
+                                    style: typography.xl2.copyWith(
                                       fontWeight: FontWeight.w600,
-                                      color: cs.onSurface,
+                                      color: colors.foreground,
+                                      height: 1.1,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     dateLine,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      color: cs.onSurfaceVariant,
+                                    style: typography.sm.copyWith(
+                                      color: colors.mutedForeground,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     _greeting(),
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: cs.onSurface,
+                                    style: typography.md.copyWith(
+                                      color: colors.foreground,
                                       height: 1.35,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            IconButton(
-                              onPressed: _openSettings,
-                              tooltip: '设置',
-                              icon: Icon(
-                                Icons.settings_outlined,
-                                color: cs.onSurfaceVariant,
+                            FButton.icon(
+                              variant: FButtonVariant.ghost,
+                              onPress: _openSettings,
+                              child: Icon(
+                                FIcons.settings,
+                                color: colors.mutedForeground,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        _ConnectionChip(cs: cs),
+                        const _ConnectionChip(),
                         if (_summaryError != null) ...[
                           const SizedBox(height: 12),
-                          _ErrorBanner(message: _summaryError!, cs: cs),
+                          _ErrorBanner(message: _summaryError!),
                         ],
                         const SizedBox(height: 20),
                         _SectionTitle(
-                          cs: cs,
-                          icon: Icons.auto_stories_outlined,
+                          icon: FIcons.bookOpenText,
                           label: _diarySectionLabel(today),
                           caption: _diarySectionCaption(today),
                         ),
                         const SizedBox(height: 10),
                         _DiaryTodayCard(
-                          cs: cs,
-                          theme: theme,
                           entries: _diaryToday,
                           onTap: () {
                             if (_diaryToday.isEmpty) {
@@ -440,15 +433,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         ),
                         const SizedBox(height: 20),
                         _SectionTitle(
-                          cs: cs,
-                          icon: Icons.bookmark_outline,
+                          icon: FIcons.bookmark,
                           label: _collectSectionLabel(today),
                           caption: _collectSectionCaption(today),
                         ),
                         const SizedBox(height: 10),
                         _CollectTodayCard(
-                          cs: cs,
-                          theme: theme,
                           items: _collectToday,
                           onTap: () {
                             if (_collectToday.isEmpty) {
@@ -465,8 +455,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         const SizedBox(height: 28),
                         Text(
                           '快捷入口',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: cs.onSurfaceVariant,
+                          style: typography.sm.copyWith(
+                            color: colors.mutedForeground,
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -474,18 +464,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         Row(
                           children: [
                             Expanded(
-                              child: FilledButton.icon(
-                                onPressed: () => widget.onOpenTab(1),
-                                icon: const Icon(Icons.edit_note_outlined),
-                                label: const Text('日记'),
+                              child: FButton(
+                                onPress: () => widget.onOpenTab(1),
+                                prefix: const Icon(FIcons.pencil),
+                                child: const Text('日记'),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => widget.onOpenTab(2),
-                                icon: const Icon(Icons.bookmark_border),
-                                label: const Text('收藏'),
+                              child: FButton(
+                                variant: FButtonVariant.outline,
+                                onPress: () => widget.onOpenTab(2),
+                                prefix: const Icon(FIcons.bookmark),
+                                child: const Text('收藏'),
                               ),
                             ),
                           ],
@@ -493,10 +484,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
-                          child: TextButton.icon(
-                            onPressed: _openSettings,
-                            icon: Icon(Icons.tune, size: 20, color: cs.primary),
-                            label: Text('GitHub 与缓存设置', style: TextStyle(color: cs.primary)),
+                          child: FButton(
+                            variant: FButtonVariant.ghost,
+                            onPress: _openSettings,
+                            prefix: Icon(FIcons.slidersHorizontal, size: 20, color: colors.primary),
+                            child: Text('GitHub 与缓存设置', style: TextStyle(color: colors.primary)),
                           ),
                         ),
                       ],
@@ -510,10 +502,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
             const Positioned.fill(
               child: IgnorePointer(
                 child: Center(
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  child: FCircularProgress(
+                    size: FCircularProgressSizeVariant.sm,
                   ),
                 ),
               ),
@@ -525,24 +515,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
 }
 
 class _DecoratedShell extends StatelessWidget {
-  const _DecoratedShell({
-    required this.cs,
-    required this.child,
-  });
+  const _DecoratedShell({required this.child});
 
-  final ColorScheme cs;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.theme.colors;
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            cs.primaryContainer.withValues(alpha: 0.35),
-            cs.surface,
+            colors.primary.withValues(alpha: 0.12),
+            colors.background,
           ],
         ),
       ),
@@ -552,21 +539,20 @@ class _DecoratedShell extends StatelessWidget {
 }
 
 class _ConnectionChip extends StatelessWidget {
-  const _ConnectionChip({required this.cs});
-
-  final ColorScheme cs;
+  const _ConnectionChip();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Row(
       children: [
-        Icon(Icons.cloud_done_outlined, size: 18, color: cs.primary),
+        Icon(FIcons.cloudCheck, size: 18, color: colors.primary),
         const SizedBox(width: 6),
         Text(
           'GitHub 已连接',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: cs.onSurfaceVariant,
+          style: typography.xs.copyWith(
+            color: colors.mutedForeground,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -577,33 +563,32 @@ class _ConnectionChip extends StatelessWidget {
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({
-    required this.cs,
     required this.icon,
     required this.label,
     this.caption,
   });
 
-  final ColorScheme cs;
   final IconData icon;
   final String label;
   final String? caption;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 22, color: cs.primary),
+            Icon(icon, size: 22, color: colors.primary),
             const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.newsreader(
-                fontSize: 20,
+              style: typography.xl.copyWith(
                 fontWeight: FontWeight.w600,
-                color: cs.onSurface,
+                color: colors.foreground,
+                height: 1.2,
               ),
             ),
           ],
@@ -612,8 +597,8 @@ class _SectionTitle extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             caption!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
+            style: typography.xs.copyWith(
+              color: colors.mutedForeground,
               height: 1.4,
             ),
           ),
@@ -624,50 +609,26 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message, required this.cs});
+  const _ErrorBanner({required this.message});
 
   final String message;
-  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: cs.errorContainer.withValues(alpha: 0.65),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.error_outline, color: cs.error, size: 22),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: cs.onErrorContainer,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return FAlert(
+      variant: FAlertVariant.destructive,
+      title: Text(message),
+      icon: const Icon(FIcons.circleAlert),
     );
   }
 }
 
 class _DiaryTodayCard extends StatelessWidget {
   const _DiaryTodayCard({
-    required this.cs,
-    required this.theme,
     required this.entries,
     required this.onTap,
   });
 
-  final ColorScheme cs;
-  final ThemeData theme;
   final List<DiaryEntry> entries;
   final VoidCallback onTap;
 
@@ -688,19 +649,18 @@ class _DiaryTodayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+    return FCard.raw(
+      child: FTappable.static(
+        onPress: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: entries.isEmpty
               ? Text(
                   '今天还没有日记条目。点按前往日历选择日期或新建记录。',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
+                  style: typography.sm.copyWith(
+                    color: colors.mutedForeground,
                     height: 1.45,
                   ),
                 )
@@ -711,8 +671,8 @@ class _DiaryTodayCard extends StatelessWidget {
                       if (i > 0) const SizedBox(height: 12),
                       Text(
                         entries[i].title.isEmpty ? '未命名' : entries[i].title,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: cs.onSurface,
+                        style: typography.sm.copyWith(
+                          color: colors.foreground,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -720,8 +680,8 @@ class _DiaryTodayCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           _subtitle(entries[i]),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
+                          style: typography.xs.copyWith(
+                            color: colors.mutedForeground,
                             height: 1.35,
                           ),
                         ),
@@ -732,8 +692,9 @@ class _DiaryTodayCard extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 10),
                         child: Text(
                           '还有 ${entries.length - 4} 条…',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: cs.primary,
+                          style: typography.xs2.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -747,33 +708,28 @@ class _DiaryTodayCard extends StatelessWidget {
 
 class _CollectTodayCard extends StatelessWidget {
   const _CollectTodayCard({
-    required this.cs,
-    required this.theme,
     required this.items,
     required this.onTap,
   });
 
-  final ColorScheme cs;
-  final ThemeData theme;
   final List<CollectItem> items;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     final show = items.take(3).toList();
-    return Material(
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
+    return FCard.raw(
+      child: FTappable.static(
+        onPress: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: items.isEmpty
               ? Text(
                   '今天还没有收藏。在仓库 collect/ 对应日期目录下添加条目后会显示在这里。',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
+                  style: typography.sm.copyWith(
+                    color: colors.mutedForeground,
                     height: 1.45,
                   ),
                 )
@@ -784,8 +740,8 @@ class _CollectTodayCard extends StatelessWidget {
                       if (i > 0) const SizedBox(height: 14),
                       Text(
                         show[i].title,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: cs.onSurface,
+                        style: typography.sm.copyWith(
+                          color: colors.foreground,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -795,8 +751,8 @@ class _CollectTodayCard extends StatelessWidget {
                           show[i].preview,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
+                          style: typography.xs.copyWith(
+                            color: colors.mutedForeground,
                             height: 1.35,
                           ),
                         ),
@@ -807,8 +763,9 @@ class _CollectTodayCard extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 10),
                         child: Text(
                           '共 ${items.length} 条，点按查看全部',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: cs.primary,
+                          style: typography.xs2.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -820,52 +777,50 @@ class _CollectTodayCard extends StatelessWidget {
   }
 }
 
-MarkdownStyleSheet _homeMarkdownSheet(ThemeData theme, ColorScheme cs) {
+MarkdownStyleSheet _homeMarkdownSheet(ThemeData theme, FColors colors, FTypography typography) {
   return MarkdownStyleSheet.fromTheme(theme).copyWith(
-    p: theme.textTheme.bodyMedium?.copyWith(
+    p: typography.sm.copyWith(
       height: 1.55,
-      color: cs.onSurfaceVariant,
+      color: colors.mutedForeground,
     ),
-    h1: GoogleFonts.newsreader(
-      fontSize: 26,
+    h1: typography.xl2.copyWith(
       fontWeight: FontWeight.w700,
-      color: cs.onSurface,
+      color: colors.foreground,
+      height: 1.2,
     ),
-    h2: GoogleFonts.newsreader(
-      fontSize: 22,
+    h2: typography.xl.copyWith(
       fontWeight: FontWeight.w700,
-      color: cs.onSurface,
+      color: colors.foreground,
+      height: 1.2,
     ),
-    h3: GoogleFonts.newsreader(
-      fontSize: 18,
+    h3: typography.lg.copyWith(
       fontWeight: FontWeight.w700,
-      color: cs.onSurface,
+      color: colors.foreground,
+      height: 1.2,
     ),
-    code: theme.textTheme.bodyMedium?.copyWith(
+    code: typography.sm.copyWith(
       fontFamily: 'monospace',
-      color: cs.onSurface,
+      color: colors.foreground,
     ),
     codeblockPadding: const EdgeInsets.all(12),
     codeblockDecoration: BoxDecoration(
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+      color: colors.secondary.withValues(alpha: 0.65),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: cs.outlineVariant.withValues(alpha: 0.7),
-      ),
+      border: Border.all(color: colors.border),
     ),
     blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
     blockquoteDecoration: BoxDecoration(
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: colors.secondary.withValues(alpha: 0.45),
       borderRadius: BorderRadius.circular(12),
       border: Border(
         left: BorderSide(
-          color: cs.primary.withValues(alpha: 0.65),
+          color: colors.primary.withValues(alpha: 0.85),
           width: 3,
         ),
       ),
     ),
-    a: theme.textTheme.bodyMedium?.copyWith(
-      color: cs.primary,
+    a: typography.sm.copyWith(
+      color: colors.primary,
       decoration: TextDecoration.underline,
     ),
   );
@@ -879,11 +834,12 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     final bodyMd = entry.source.trim();
 
-    return Material(
-      color: cs.surface,
+    return ColoredBox(
+      color: colors.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -894,17 +850,17 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
                 Expanded(
                   child: Text(
                     entry.title.isEmpty ? '未命名' : entry.title,
-                    style: GoogleFonts.newsreader(
-                      fontSize: 22,
+                    style: typography.xl.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
+                      color: colors.foreground,
+                      height: 1.2,
                     ),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: '关闭',
-                  icon: const Icon(Icons.close),
+                FButton.icon(
+                  variant: FButtonVariant.ghost,
+                  onPress: () => Navigator.of(context).pop(),
+                  child: const Icon(FIcons.x),
                 ),
               ],
             ),
@@ -914,8 +870,8 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
                 entry.headerLine,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
+                style: typography.xs.copyWith(
+                  color: colors.mutedForeground,
                   height: 1.35,
                 ),
               ),
@@ -928,11 +884,9 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
                 runSpacing: 4,
                 children: entry.tags
                     .map(
-                      (t) => Chip(
-                        label: Text(t),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        labelStyle: theme.textTheme.labelSmall,
+                      (t) => FBadge(
+                        variant: FBadgeVariant.outline,
+                        child: Text(t, style: typography.xs2),
                       ),
                     )
                     .toList(),
@@ -945,14 +899,14 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
                 child: bodyMd.isEmpty
                     ? Text(
                         '（暂无 source 正文）',
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        style: typography.sm.copyWith(
                           height: 1.55,
-                          color: cs.onSurfaceVariant,
+                          color: colors.mutedForeground,
                         ),
                       )
                     : MarkdownBody(
                         data: bodyMd,
-                        styleSheet: _homeMarkdownSheet(theme, cs),
+                        styleSheet: _homeMarkdownSheet(theme, colors, typography),
                       ),
               ),
             ),
@@ -971,10 +925,11 @@ class _CollectItemPreviewSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
-    return Material(
-      color: cs.surface,
+    return ColoredBox(
+      color: colors.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -985,17 +940,17 @@ class _CollectItemPreviewSheet extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item.title,
-                    style: GoogleFonts.newsreader(
-                      fontSize: 22,
+                    style: typography.xl.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
+                      color: colors.foreground,
+                      height: 1.2,
                     ),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: '关闭',
-                  icon: const Icon(Icons.close),
+                FButton.icon(
+                  variant: FButtonVariant.ghost,
+                  onPress: () => Navigator.of(context).pop(),
+                  child: const Icon(FIcons.x),
                 ),
               ],
             ),
@@ -1004,8 +959,8 @@ class _CollectItemPreviewSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
               item.path,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
+              style: typography.xs.copyWith(
+                color: colors.mutedForeground,
               ),
             ),
           ),
@@ -1016,14 +971,14 @@ class _CollectItemPreviewSheet extends StatelessWidget {
                 child: item.body.trim().isEmpty
                     ? Text(
                         '（内容为空）',
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        style: typography.sm.copyWith(
                           height: 1.55,
-                          color: cs.onSurfaceVariant,
+                          color: colors.mutedForeground,
                         ),
                       )
                     : MarkdownBody(
                         data: item.body,
-                        styleSheet: _homeMarkdownSheet(theme, cs),
+                        styleSheet: _homeMarkdownSheet(theme, colors, typography),
                       ),
               ),
             ),
@@ -1035,22 +990,20 @@ class _CollectItemPreviewSheet extends StatelessWidget {
 }
 
 class _TokenHintBody extends StatelessWidget {
-  const _TokenHintBody({required this.cs, required this.onOpenSettings});
+  const _TokenHintBody({required this.onOpenSettings});
 
-  final ColorScheme cs;
   final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+          child: FCard.raw(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1058,13 +1011,14 @@ class _TokenHintBody extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.lock_outline, color: cs.primary),
+                      Icon(FIcons.lock, color: colors.primary),
                       const SizedBox(width: 8),
                       Text(
                         '连接私有仓库',
-                        style: GoogleFonts.newsreader(
-                          fontSize: 22,
+                        style: typography.xl.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                          height: 1.2,
                         ),
                       ),
                     ],
@@ -1073,16 +1027,16 @@ class _TokenHintBody extends StatelessWidget {
                   Text(
                     '首页摘要、日记与收藏都从 GitHub 私有仓库 ForeverPx/my-ai-memory 读取。'
                     '请使用带 repo 权限的 Personal Access Token，并在设置中填写。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: typography.sm.copyWith(
                       height: 1.45,
-                      color: cs.onSurfaceVariant,
+                      color: colors.mutedForeground,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: onOpenSettings,
-                    icon: const Icon(Icons.settings_outlined),
-                    label: const Text('打开设置并填写 Token'),
+                  FButton(
+                    onPress: onOpenSettings,
+                    prefix: const Icon(FIcons.settings),
+                    child: const Text('打开设置并填写 Token'),
                   ),
                 ],
               ),
@@ -1099,16 +1053,14 @@ class _WebCorsHintBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+          child: FCard.raw(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1116,13 +1068,14 @@ class _WebCorsHintBody extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.web_asset_outlined, color: cs.primary),
+                      Icon(FIcons.globe, color: colors.primary),
                       const SizedBox(width: 8),
                       Text(
                         'Web 端限制',
-                        style: GoogleFonts.newsreader(
-                          fontSize: 22,
+                        style: typography.xl.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                          height: 1.2,
                         ),
                       ),
                     ],
@@ -1132,9 +1085,9 @@ class _WebCorsHintBody extends StatelessWidget {
                     '浏览器无法直接访问 GitHub REST API（跨域策略）。'
                     '请在 iOS、Android 或桌面端运行本应用以同步私有仓库；'
                     '若必须在网页中使用，需要自行部署可转发请求的代理服务。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: typography.sm.copyWith(
                       height: 1.45,
-                      color: cs.onSurfaceVariant,
+                      color: colors.mutedForeground,
                     ),
                   ),
                 ],

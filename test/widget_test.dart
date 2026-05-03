@@ -12,9 +12,7 @@ import 'package:lifeos/main.dart';
 void main() {
   testWidgets('LifeOS home smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const LifeOSApp());
-    // `GoogleFonts` may keep scheduling frames (font fetch/precaching), so
-    // `pumpAndSettle` can time out in widget tests. A simple pump is enough for
-    // a smoke test.
+    // Avoid `pumpAndSettle`: async work and overlays can prevent settling.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 

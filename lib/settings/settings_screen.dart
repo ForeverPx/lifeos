@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:forui/forui.dart';
 
 import '../config/token_store.dart';
 import '../collect/collect_cache.dart';
@@ -17,7 +17,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _controller = TextEditingController();
-  bool _obscure = true;
   bool _loading = true;
   bool _saving = false;
   bool _clearingCache = false;
@@ -66,19 +65,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _clearDiaryCache() async {
-    final ok = await showDialog<bool>(
+    final ok = await showFDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx, style, animation) => FDialog(
         title: const Text('清除日记缓存？'),
-        content: const Text('将删除本地缓存的日记内容，不会影响 GitHub 上的数据。'),
+        body: const Text('将删除本地缓存的日记内容，不会影响 GitHub 上的数据。'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
+          FButton(
+            onPress: () => Navigator.of(ctx).pop(true),
             child: const Text('清除'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
           ),
         ],
       ),
@@ -89,8 +89,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final removed = await DiaryCache.clearAll();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已清除 $removed 条日记缓存')),
+      showFToast(
+        context: context,
+        title: Text('已清除 $removed 条日记缓存'),
       );
     } finally {
       if (mounted) setState(() => _clearingCache = false);
@@ -98,19 +99,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _clearCollectCache() async {
-    final ok = await showDialog<bool>(
+    final ok = await showFDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx, style, animation) => FDialog(
         title: const Text('清除收藏缓存？'),
-        content: const Text('将删除本地缓存的收藏内容，不会影响 GitHub 上的数据。'),
+        body: const Text('将删除本地缓存的收藏内容，不会影响 GitHub 上的数据。'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
+          FButton(
+            onPress: () => Navigator.of(ctx).pop(true),
             child: const Text('清除'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
           ),
         ],
       ),
@@ -121,8 +123,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final removed = await CollectCache.clearAll();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已清除 $removed 条收藏缓存')),
+      showFToast(
+        context: context,
+        title: Text('已清除 $removed 条收藏缓存'),
       );
     } finally {
       if (mounted) setState(() => _clearingCollectCache = false);
@@ -131,30 +134,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final typography = context.theme.typography;
+    final colors = context.theme.colors;
 
-    return Scaffold(
-      appBar: AppBar(
+    return FScaffold(
+      header: FHeader.nested(
+        prefixes: [
+          FButton.icon(
+            variant: FButtonVariant.ghost,
+            onPress: () => Navigator.of(context).pop(),
+            child: const Icon(FIcons.chevronLeft),
+          ),
+        ],
         title: const Text('设置'),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
+      child: _loading
+          ? const Center(child: FCircularProgress())
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
                 Text(
                   'GitHub',
-                  style: GoogleFonts.newsreader(
-                    fontSize: 22,
+                  style: typography.xl2.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+                    color: colors.foreground,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Material(
-                  color: cs.surface.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(16),
+                FCard.raw(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -162,71 +169,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           'Personal Access Token',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: typography.lg.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           '用于读取私有仓库中的日记内容。建议使用 fine-grained token，并只授予需要访问的仓库权限。',
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: typography.sm.copyWith(
                             height: 1.45,
-                            color: cs.onSurfaceVariant,
+                            color: colors.mutedForeground,
                           ),
                         ),
                         const SizedBox(height: 14),
-                        TextField(
-                          controller: _controller,
-                          obscureText: _obscure,
+                        FTextField.password(
+                          control: FTextFieldControl.managed(controller: _controller),
+                          label: const Text('GITHUB_TOKEN'),
+                          hint: 'github_pat_...',
+                          keyboardType: TextInputType.visiblePassword,
                           autocorrect: false,
                           enableSuggestions: false,
-                          keyboardType: TextInputType.visiblePassword,
-                          decoration: InputDecoration(
-                            labelText: 'GITHUB_TOKEN',
-                            hintText: 'github_pat_...',
-                            border: const OutlineInputBorder(),
-                            suffixIcon: IconButton(
-                              tooltip: _obscure ? '显示' : '隐藏',
-                              onPressed: () => setState(() => _obscure = !_obscure),
-                              icon: Icon(
-                                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              ),
-                            ),
-                          ),
                         ),
                         if (kIsWeb) ...[
                           const SizedBox(height: 10),
                           Text(
                             '提示：Web 端会存到浏览器本地存储，且浏览器无法直接访问 GitHub API（跨域限制），日记同步建议在移动端/桌面端使用。',
-                            style: theme.textTheme.bodySmall?.copyWith(
+                            style: typography.xs3.copyWith(
                               height: 1.4,
-                              color: cs.onSurfaceVariant,
+                              color: colors.mutedForeground,
                             ),
                           ),
                         ],
                         const SizedBox(height: 14),
                         Row(
                           children: [
-                            FilledButton.icon(
-                              onPressed: _saving ? null : _save,
-                              icon: _saving
-                                  ? SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: cs.onPrimary,
-                                      ),
-                                    )
-                                  : const Icon(Icons.save_outlined),
-                              label: Text(_saving ? '保存中…' : '保存'),
+                            FButton(
+                              onPress: _saving ? null : _save,
+                              prefix: _saving
+                                  ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                                  : const Icon(FIcons.save),
+                              child: Text(_saving ? '保存中…' : '保存'),
                             ),
                             if (_savedHint != null) ...[
                               const SizedBox(width: 12),
                               Text(
                                 _savedHint!,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: cs.tertiary,
+                                style: typography.sm.copyWith(
+                                  color: colors.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -240,57 +227,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 18),
                 Text(
                   '存储',
-                  style: GoogleFonts.newsreader(
-                    fontSize: 22,
+                  style: typography.xl2.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+                    color: colors.foreground,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Material(
-                  color: cs.surface.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: Icon(
-                          Icons.delete_outline,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        title: const Text('清除日记缓存'),
-                        subtitle: const Text('删除已缓存的历史日记内容'),
-                        trailing: _clearingCache
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.chevron_right),
-                        onTap: _clearingCache ? null : _clearDiaryCache,
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: Icon(
-                          Icons.delete_outline,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        title: const Text('清除收藏缓存'),
-                        subtitle: const Text('删除已缓存的历史收藏内容'),
-                        trailing: _clearingCollectCache
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.chevron_right),
-                        onTap: _clearingCollectCache ? null : _clearCollectCache,
-                      ),
-                    ],
-                  ),
+                FTileGroup(
+                  children: [
+                    FTile(
+                      prefix: Icon(FIcons.trash2, color: colors.mutedForeground),
+                      title: const Text('清除日记缓存'),
+                      subtitle: const Text('删除已缓存的历史日记内容'),
+                      suffix: _clearingCache
+                          ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                          : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                      onPress: _clearingCache ? null : _clearDiaryCache,
+                    ),
+                    FTile(
+                      prefix: Icon(FIcons.trash2, color: colors.mutedForeground),
+                      title: const Text('清除收藏缓存'),
+                      subtitle: const Text('删除已缓存的历史收藏内容'),
+                      suffix: _clearingCollectCache
+                          ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                          : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                      onPress: _clearingCollectCache ? null : _clearCollectCache,
+                    ),
+                  ],
                 ),
               ],
             ),
     );
   }
 }
-

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:forui/forui.dart';
 
 import 'checkin_global_stats.dart';
 import 'checkin_models.dart';
@@ -36,33 +36,28 @@ class CheckinRecentWeeksCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.calendar_view_week_outlined, size: 22, color: cs.primary),
+            Icon(FIcons.calendarDays, size: 22, color: colors.primary),
             const SizedBox(width: 8),
             Text(
               '周日历',
-              style: GoogleFonts.newsreader(
-                fontSize: 20,
+              style: typography.xl.copyWith(
                 fontWeight: FontWeight.w600,
-                color: cs.onSurface,
+                color: colors.foreground,
+                height: 1.2,
               ),
             ),
             if (loading) ...[
               const SizedBox(width: 10),
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: cs.primary,
-                ),
+              const FCircularProgress(
+                size: FCircularProgressSizeVariant.sm,
               ),
             ],
           ],
@@ -70,8 +65,8 @@ class CheckinRecentWeeksCalendar extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           '每行一周：上方为周标识与总体达标情况，下方列出各打卡项的进度与是否达标。',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: cs.onSurfaceVariant,
+          style: typography.xs.copyWith(
+            color: colors.mutedForeground,
             height: 1.35,
           ),
         ),
@@ -93,8 +88,8 @@ class _WeekRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     final hasData = rollup != null;
     final allMet = rollup?.allMet ?? false;
     final met = rollup?.habitsMet ?? 0;
@@ -103,7 +98,7 @@ class _WeekRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        color: colors.secondary.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
@@ -115,9 +110,9 @@ class _WeekRow extends StatelessWidget {
                 children: [
                   Text(
                     bounds.weekId,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: typography.sm.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: cs.onSurface,
+                      color: colors.foreground,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -125,20 +120,20 @@ class _WeekRow extends StatelessWidget {
                   if (!hasData)
                     Text(
                       '暂无统计',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
+                      style: typography.xs.copyWith(
+                        color: colors.mutedForeground,
                       ),
                     )
                   else if (allMet)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.verified_rounded, size: 20, color: cs.tertiary),
+                        Icon(FIcons.badgeCheck, size: 20, color: colors.primary),
                         const SizedBox(width: 4),
                         Text(
                           '本周全达成',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: cs.tertiary,
+                          style: typography.xs.copyWith(
+                            color: colors.primary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -148,13 +143,13 @@ class _WeekRow extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: cs.secondaryContainer.withValues(alpha: 0.65),
+                        color: colors.muted.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '$met / $total 项达标',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: cs.onSecondaryContainer,
+                        style: typography.xs.copyWith(
+                          color: colors.foreground,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -191,8 +186,8 @@ class _HabitLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
     final CheckinHabitRollup? r =
         hasWeekData && rollup != null ? rollup!.byHabit[def.id] : null;
@@ -206,32 +201,32 @@ class _HabitLine extends StatelessWidget {
         Expanded(
           child: Text(
             def.label,
-            style: theme.textTheme.bodyMedium?.copyWith(
+            style: typography.sm.copyWith(
               fontWeight: FontWeight.w600,
-              color: showPlaceholder ? cs.onSurfaceVariant : cs.onSurface,
+              color: showPlaceholder ? colors.mutedForeground : colors.foreground,
             ),
           ),
         ),
         Text(
           showPlaceholder ? '—' : '$count / $target 次',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: showPlaceholder ? cs.outline : cs.onSurfaceVariant,
+          style: typography.xs.copyWith(
+            color: showPlaceholder ? colors.border : colors.mutedForeground,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.15,
           ),
         ),
         const SizedBox(width: 8),
         if (showPlaceholder)
-          Icon(Icons.remove_circle_outline, size: 18, color: cs.outline)
+          Icon(FIcons.circleMinus, size: 18, color: colors.border)
         else if (met)
           Tooltip(
             message: '该项本周已达标',
-            child: Icon(Icons.check_circle_rounded, size: 20, color: cs.tertiary),
+            child: Icon(FIcons.circleCheck, size: 20, color: colors.primary),
           )
         else
           Tooltip(
             message: '该项本周未达标',
-            child: Icon(Icons.radio_button_unchecked, size: 20, color: cs.outline),
+            child: Icon(FIcons.circle, size: 20, color: colors.border),
           ),
       ],
     );

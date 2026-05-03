@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
 import '../config/github_token.dart';
@@ -135,20 +135,20 @@ class _CollectScreenState extends State<CollectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     final q = _query.trim().toLowerCase();
 
     if (kIsWeb) {
-      return _WebCorsHint(cs: cs);
+      return const _WebCorsHint();
     }
 
     if (_loadingToken) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: FCircularProgress());
     }
 
     if (!_repo.hasToken) {
-      return _TokenHint(cs: cs, onOpenSettings: _openSettings);
+      return _TokenHint(onOpenSettings: _openSettings);
     }
 
     final hasQuery = q.isNotEmpty;
@@ -178,9 +178,9 @@ class _CollectScreenState extends State<CollectScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            cs.surfaceContainerHighest.withValues(alpha: 0.35),
-            cs.tertiaryContainer.withValues(alpha: 0.22),
-            theme.scaffoldBackgroundColor,
+            colors.secondary.withValues(alpha: 0.4),
+            colors.primary.withValues(alpha: 0.06),
+            colors.background,
           ],
         ),
       ),
@@ -200,33 +200,33 @@ class _CollectScreenState extends State<CollectScreen> {
                           Expanded(
                             child: Text(
                               '收藏',
-                              style: GoogleFonts.newsreader(
-                                fontSize: 32,
+                              style: typography.xl2.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: cs.onSurface,
+                                color: colors.foreground,
+                                height: 1.1,
                               ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: () {
+                          FButton.icon(
+                            variant: FButtonVariant.ghost,
+                            onPress: () {
                               setState(() => _searchExpanded = !_searchExpanded);
                               if (!_searchExpanded) {
                                 _searchController.clear();
                                 _setQuery('');
                               }
                             },
-                            tooltip: _searchExpanded ? '收起搜索' : '搜索',
-                            icon: Icon(
-                              _searchExpanded ? Icons.search_off_outlined : Icons.search_outlined,
-                              color: cs.onSurfaceVariant,
+                            child: Icon(
+                              _searchExpanded ? FIcons.searchX : FIcons.search,
+                              color: colors.mutedForeground,
                             ),
                           ),
-                          IconButton(
-                            onPressed: _openSettings,
-                            tooltip: '设置',
-                            icon: Icon(
-                              Icons.settings_outlined,
-                              color: cs.onSurfaceVariant,
+                          FButton.icon(
+                            variant: FButtonVariant.ghost,
+                            onPress: _openSettings,
+                            child: Icon(
+                              FIcons.settings,
+                              color: colors.mutedForeground,
                             ),
                           ),
                         ],
@@ -234,27 +234,22 @@ class _CollectScreenState extends State<CollectScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'ForeverPx / my-ai-memory · collect',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        style: typography.xs.copyWith(
+                          color: colors.mutedForeground,
                         ),
                       ),
                       const SizedBox(height: 10),
                       if (_loading)
                         Row(
                           children: [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: cs.primary,
-                              ),
+                            const FCircularProgress(
+                              size: FCircularProgressSizeVariant.sm,
                             ),
                             const SizedBox(width: 10),
                             Text(
                               '同步中…',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
+                              style: typography.sm.copyWith(
+                                color: colors.mutedForeground,
                               ),
                             ),
                           ],
@@ -264,8 +259,8 @@ class _CollectScreenState extends State<CollectScreen> {
                           hasQuery
                               ? '搜索结果：${resultCount ?? 0} 条（仅搜索已加载内容）'
                               : '下拉刷新 · 按日期展示收藏内容',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
+                          style: typography.sm.copyWith(
+                            color: colors.mutedForeground,
                           ),
                         ),
                     ],
@@ -280,59 +275,50 @@ class _CollectScreenState extends State<CollectScreen> {
                   firstChild: const SizedBox(height: 0),
                   secondChild: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: Material(
-                      color: cs.surface.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(16),
+                    child: FCard.raw(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                        child: ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: _searchController,
-                          builder: (context, value, _) {
-                            final hasText = value.text.trim().isNotEmpty;
-                            return TextField(
-                              controller: _searchController,
-                              textInputAction: TextInputAction.search,
-                              onChanged: _onSearchChanged,
-                              decoration: InputDecoration(
-                                hintText: '搜索标题 / 正文 / 文件名',
-                                prefixIcon: const Icon(Icons.search),
-                                suffixIcon: !hasText
-                                    ? IconButton(
-                                        tooltip: '收起',
-                                        onPressed: () {
-                                          setState(() => _searchExpanded = false);
-                                          _searchController.clear();
-                                          _setQuery('');
-                                        },
-                                        icon: const Icon(Icons.keyboard_arrow_up),
-                                      )
-                                    : Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            tooltip: '清空',
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              _setQuery('');
-                                            },
-                                            icon: const Icon(Icons.close),
-                                          ),
-                                          IconButton(
-                                            tooltip: '收起',
-                                            onPressed: () {
-                                              setState(() => _searchExpanded = false);
-                                              _searchController.clear();
-                                              _setQuery('');
-                                            },
-                                            icon: const Icon(Icons.keyboard_arrow_up),
-                                          ),
-                                        ],
-                                      ),
-                                border: const OutlineInputBorder(),
-                                isDense: true,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FTextField(
+                              control: FTextFieldControl.managed(
+                                controller: _searchController,
+                                onChange: (_) {
+                                  _searchDebounce?.cancel();
+                                  _searchDebounce = Timer(
+                                    const Duration(milliseconds: 180),
+                                    () {
+                                      if (!mounted) return;
+                                      _setQuery(_searchController.text);
+                                    },
+                                  );
+                                },
                               ),
-                            );
-                          },
+                              hint: '搜索标题 / 正文 / 文件名',
+                              textInputAction: TextInputAction.search,
+                              prefixBuilder: (c, style, variants) =>
+                                  FTextField.prefixIconBuilder(
+                                    c,
+                                    style,
+                                    variants,
+                                    const Icon(FIcons.search),
+                                  ),
+                              clearable: (v) => v.text.trim().isNotEmpty,
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FButton(
+                                variant: FButtonVariant.ghost,
+                                onPress: () {
+                                  setState(() => _searchExpanded = false);
+                                  _searchController.clear();
+                                  _setQuery('');
+                                },
+                                child: const Text('收起'),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -343,18 +329,10 @@ class _CollectScreenState extends State<CollectScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Material(
-                      color: cs.errorContainer,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          _error!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: cs.onErrorContainer,
-                          ),
-                        ),
-                      ),
+                    child: FAlert(
+                      variant: FAlertVariant.destructive,
+                      title: Text(_error!),
+                      icon: const Icon(FIcons.circleAlert),
                     ),
                   ),
                 ),
@@ -364,8 +342,8 @@ class _CollectScreenState extends State<CollectScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
                     child: Text(
                       hasQuery ? '没有匹配的收藏内容。' : '还没有找到 collect/ 下的日期文件夹。',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
+                      style: typography.sm.copyWith(
+                        color: colors.mutedForeground,
                       ),
                     ),
                   ),
@@ -405,14 +383,6 @@ class _CollectScreenState extends State<CollectScreen> {
     );
   }
 
-  void _onSearchChanged(String _) {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 180), () {
-      if (!mounted) return;
-      _setQuery(_searchController.text);
-    });
-  }
-
   void _setQuery(String v) {
     final next = v.trim();
     if (next == _query) return;
@@ -441,14 +411,11 @@ class _DaySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     final label = DateFormat('yyyy年MM月dd日', 'zh_CN').format(day);
 
-    return Material(
-      elevation: 0,
-      color: cs.surface.withValues(alpha: 0.92),
-      borderRadius: BorderRadius.circular(18),
+    return FCard.raw(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(
@@ -456,25 +423,20 @@ class _DaySection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.bookmark_border, size: 20, color: cs.primary),
+                Icon(FIcons.bookmark, size: 20, color: colors.primary),
                 const SizedBox(width: 8),
                 Text(
                   label,
-                  style: GoogleFonts.newsreader(
-                    fontSize: 20,
+                  style: typography.xl.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+                    color: colors.foreground,
+                    height: 1.2,
                   ),
                 ),
                 const Spacer(),
                 if (loading)
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: cs.primary,
-                    ),
+                  const FCircularProgress(
+                    size: FCircularProgressSizeVariant.sm,
                   ),
               ],
             ),
@@ -482,8 +444,8 @@ class _DaySection extends StatelessWidget {
             if (showNotLoadedHint)
               Text(
                 '为保证速度，仅加载最近 30 天。下拉刷新会重新同步最近内容。',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
+                style: typography.xs.copyWith(
+                  color: colors.mutedForeground,
                   height: 1.35,
                 ),
               ),
@@ -491,8 +453,8 @@ class _DaySection extends StatelessWidget {
             if (!loading && items.isEmpty)
               Text(
                 '这一天没有可展示的文本文件（仅识别 .md/.markdown/.txt）。',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
+                style: typography.sm.copyWith(
+                  color: colors.mutedForeground,
                 ),
               ),
             for (final item in items) ...[
@@ -514,21 +476,19 @@ class _CollectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Material(
-      elevation: 1.2,
-      shadowColor: Colors.black26,
-      borderRadius: BorderRadius.circular(16),
-      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          showModalBottomSheet<void>(
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+    return FCard.raw(
+      child: FTappable.static(
+        onPress: () {
+          showFSheet<void>(
             context: context,
-            isScrollControlled: true,
-            showDragHandle: true,
-            builder: (_) => _CollectDetailSheet(item: item),
+            side: FLayout.btt,
+            mainAxisMaxRatio: 0.88,
+            builder: (ctx) => ColoredBox(
+              color: FTheme.of(ctx).colors.background,
+              child: _CollectDetailSheet(item: item),
+            ),
           );
         },
         child: Padding(
@@ -538,9 +498,9 @@ class _CollectCard extends StatelessWidget {
             children: [
               Text(
                 item.title,
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: typography.lg.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
+                  color: colors.foreground,
                   height: 1.25,
                 ),
               ),
@@ -548,28 +508,28 @@ class _CollectCard extends StatelessWidget {
               if (item.preview.isNotEmpty)
                 Text(
                   item.preview,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
+                  style: typography.sm.copyWith(
+                    color: colors.mutedForeground,
                     height: 1.45,
                   ),
                 ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Icon(Icons.description_outlined, size: 16, color: cs.onSurfaceVariant),
+                  Icon(FIcons.fileText, size: 16, color: colors.mutedForeground),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       item.fileName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
+                      style: typography.xs.copyWith(
+                        color: colors.mutedForeground,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Icon(Icons.open_in_new, size: 16, color: cs.onSurfaceVariant),
+                  Icon(FIcons.externalLink, size: 16, color: colors.mutedForeground),
                 ],
               ),
             ],
@@ -580,6 +540,31 @@ class _CollectCard extends StatelessWidget {
   }
 }
 
+MarkdownStyleSheet _collectMarkdownSheet(ThemeData theme, FColors colors, FTypography typography) {
+  return MarkdownStyleSheet.fromTheme(theme).copyWith(
+    p: typography.sm.copyWith(height: 1.55, color: colors.mutedForeground),
+    h1: typography.xl2.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
+    h2: typography.xl.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
+    h3: typography.lg.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
+    code: typography.sm.copyWith(fontFamily: 'monospace', color: colors.foreground),
+    codeblockPadding: const EdgeInsets.all(12),
+    codeblockDecoration: BoxDecoration(
+      color: colors.secondary.withValues(alpha: 0.65),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: colors.border),
+    ),
+    blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+    blockquoteDecoration: BoxDecoration(
+      color: colors.secondary.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(12),
+      border: Border(
+        left: BorderSide(color: colors.primary.withValues(alpha: 0.85), width: 3),
+      ),
+    ),
+    a: typography.sm.copyWith(color: colors.primary, decoration: TextDecoration.underline),
+  );
+}
+
 class _CollectDetailSheet extends StatelessWidget {
   const _CollectDetailSheet({required this.item});
 
@@ -588,123 +573,80 @@ class _CollectDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          16 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.title,
-              style: GoogleFonts.newsreader(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              item.path,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Flexible(
-              child: SelectionArea(
-                child: SingleChildScrollView(
-                  child: item.body.trim().isEmpty
-                      ? Text(
-                          '（内容为空）',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            height: 1.55,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        )
-                      : MarkdownBody(
-                          data: item.body,
-                          styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                            p: theme.textTheme.bodyMedium?.copyWith(
-                              height: 1.55,
-                              color: cs.onSurfaceVariant,
-                            ),
-                            h1: GoogleFonts.newsreader(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w700,
-                              color: cs.onSurface,
-                            ),
-                            h2: GoogleFonts.newsreader(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: cs.onSurface,
-                            ),
-                            h3: GoogleFonts.newsreader(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: cs.onSurface,
-                            ),
-                            code: theme.textTheme.bodyMedium?.copyWith(
-                              fontFamily: 'monospace',
-                              color: cs.onSurface,
-                            ),
-                            codeblockPadding: const EdgeInsets.all(12),
-                            codeblockDecoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: cs.outlineVariant.withValues(alpha: 0.7),
-                              ),
-                            ),
-                            blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                            blockquoteDecoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border(
-                                left: BorderSide(
-                                  color: cs.primary.withValues(alpha: 0.65),
-                                  width: 3,
-                                ),
-                              ),
-                            ),
-                            a: theme.textTheme.bodyMedium?.copyWith(
-                              color: cs.primary,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+    return ColoredBox(
+      color: colors.background,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: typography.xl.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.foreground,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
+                FButton.icon(
+                  variant: FButtonVariant.ghost,
+                  onPress: () => Navigator.of(context).pop(),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              item.path,
+              style: typography.xs.copyWith(color: colors.mutedForeground),
+            ),
+          ),
+          Expanded(
+            child: SelectionArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+                child: item.body.trim().isEmpty
+                    ? Text(
+                        '（内容为空）',
+                        style: typography.sm.copyWith(
+                          height: 1.55,
+                          color: colors.mutedForeground,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data: item.body,
+                        styleSheet: _collectMarkdownSheet(theme, colors, typography),
+                      ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _WebCorsHint extends StatelessWidget {
-  const _WebCorsHint({required this.cs});
-
-  final ColorScheme cs;
+  const _WebCorsHint();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+          child: FCard.raw(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -712,13 +654,14 @@ class _WebCorsHint extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.web_asset_outlined, color: cs.primary),
+                      Icon(FIcons.globe, color: colors.primary),
                       const SizedBox(width: 8),
                       Text(
                         'Web 端限制',
-                        style: GoogleFonts.newsreader(
-                          fontSize: 22,
+                        style: typography.xl.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                          height: 1.2,
                         ),
                       ),
                     ],
@@ -728,9 +671,9 @@ class _WebCorsHint extends StatelessWidget {
                     '浏览器无法直接访问 GitHub REST API（跨域策略）。'
                     '请在 iOS、Android 或桌面端运行本应用以同步私有仓库收藏；'
                     '若必须在网页中使用，需要自行部署可转发请求的代理服务。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: typography.sm.copyWith(
                       height: 1.45,
-                      color: cs.onSurfaceVariant,
+                      color: colors.mutedForeground,
                     ),
                   ),
                 ],
@@ -744,22 +687,20 @@ class _WebCorsHint extends StatelessWidget {
 }
 
 class _TokenHint extends StatelessWidget {
-  const _TokenHint({required this.cs, required this.onOpenSettings});
+  const _TokenHint({required this.onOpenSettings});
 
-  final ColorScheme cs;
   final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+          child: FCard.raw(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -767,13 +708,14 @@ class _TokenHint extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.lock_outline, color: cs.primary),
+                      Icon(FIcons.lock, color: colors.primary),
                       const SizedBox(width: 8),
                       Text(
                         '连接私有仓库',
-                        style: GoogleFonts.newsreader(
-                          fontSize: 22,
+                        style: typography.xl.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                          height: 1.2,
                         ),
                       ),
                     ],
@@ -783,16 +725,16 @@ class _TokenHint extends StatelessWidget {
                     '收藏从 GitHub 私有仓库 '
                     'ForeverPx/my-ai-memory 的 collect 目录读取。'
                     '请使用带 repo 权限的 Personal Access Token，并在设置中填写。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: typography.sm.copyWith(
                       height: 1.45,
-                      color: cs.onSurfaceVariant,
+                      color: colors.mutedForeground,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: onOpenSettings,
-                    icon: const Icon(Icons.settings_outlined),
-                    label: const Text('打开设置并填写 Token'),
+                  FButton(
+                    onPress: onOpenSettings,
+                    prefix: const Icon(FIcons.settings),
+                    child: const Text('打开设置并填写 Token'),
                   ),
                 ],
               ),

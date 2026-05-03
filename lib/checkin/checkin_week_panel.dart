@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
 import 'checkin_models.dart';
@@ -29,22 +29,13 @@ class CheckinWeekPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
     if (loading) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: cs.primary,
-            ),
-          ),
-        ),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: FCircularProgress()),
       );
     }
 
@@ -58,33 +49,28 @@ class CheckinWeekPanel extends StatelessWidget {
         if (showHeading) ...[
           Row(
             children: [
-              Icon(Icons.task_alt_outlined, size: 22, color: cs.primary),
+              Icon(FIcons.listChecks, size: 22, color: colors.primary),
               const SizedBox(width: 8),
               Text(
                 '本周打卡',
-                style: GoogleFonts.newsreader(
-                  fontSize: 20,
+                style: typography.xl.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
+                  color: colors.foreground,
+                  height: 1.2,
                 ),
               ),
               const Spacer(),
               if (saving)
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: cs.primary,
-                  ),
+                const FCircularProgress(
+                  size: FCircularProgressSizeVariant.sm,
                 ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             '${bounds.weekId} · $rangeLabel',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
+            style: typography.xs.copyWith(
+              color: colors.mutedForeground,
               height: 1.35,
             ),
           ),
@@ -95,23 +81,18 @@ class CheckinWeekPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${bounds.weekId} · $rangeLabel',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
+                  style: typography.sm.copyWith(
+                    color: colors.mutedForeground,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
                   ),
                 ),
               ),
               if (saving)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 2),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: cs.primary,
-                    ),
+                const Padding(
+                  padding: EdgeInsets.only(left: 8, top: 2),
+                  child: FCircularProgress(
+                    size: FCircularProgressSizeVariant.sm,
                   ),
                 ),
             ],
@@ -160,15 +141,15 @@ class _ProjectRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     final target = def.weeklyTarget;
     final goalMet = weekProgress >= target;
 
     return Material(
       color: goalMet
-          ? cs.tertiaryContainer.withValues(alpha: 0.35)
-          : cs.surfaceContainerHighest.withValues(alpha: 0.45),
+          ? colors.primary.withValues(alpha: 0.12)
+          : colors.secondary.withValues(alpha: 0.55),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
@@ -181,16 +162,16 @@ class _ProjectRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     def.label,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: typography.sm.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
+                      color: colors.foreground,
                     ),
                   ),
                 ),
                 Text(
                   '$weekProgress / $target 次',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: goalMet ? cs.tertiary : cs.onSurfaceVariant,
+                  style: typography.xs.copyWith(
+                    color: goalMet ? colors.primary : colors.mutedForeground,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.2,
                   ),
@@ -200,9 +181,9 @@ class _ProjectRow extends StatelessWidget {
                   Tooltip(
                     message: '本周目标已达成',
                     child: Icon(
-                      Icons.verified_rounded,
+                      FIcons.badgeCheck,
                       size: 22,
-                      color: cs.tertiary,
+                      color: colors.primary,
                     ),
                   ),
                 ],
@@ -252,12 +233,13 @@ class _DayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
     return Material(
       color: checked
-          ? cs.primaryContainer.withValues(alpha: 0.9)
-          : cs.surface.withValues(alpha: 0.2),
+          ? colors.primary.withValues(alpha: 0.35)
+          : colors.muted.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -268,17 +250,16 @@ class _DayChip extends StatelessWidget {
             children: [
               Text(
                 weekdayLabel,
-                style: TextStyle(
-                  fontSize: 11,
+                style: typography.xs2.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: checked ? cs.onPrimaryContainer : cs.onSurfaceVariant,
+                  color: checked ? colors.primaryForeground : colors.mutedForeground,
                 ),
               ),
               const SizedBox(height: 2),
               Icon(
-                checked ? Icons.check_circle : Icons.circle_outlined,
+                checked ? FIcons.circleCheck : FIcons.circle,
                 size: 20,
-                color: checked ? cs.primary : cs.outline,
+                color: checked ? colors.primary : colors.border,
               ),
             ],
           ),

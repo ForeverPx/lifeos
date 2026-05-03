@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:forui/forui.dart';
 
 import '../config/github_token.dart';
 import '../config/token_store.dart';
@@ -150,12 +150,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
       if (!outcome.globalStatsUpdated &&
           outcome.globalStatsError != null &&
           mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '周打卡已保存，全局统计未同步：${outcome.globalStatsError}',
-            ),
-          ),
+        showFToast(
+          context: context,
+          title: const Text('周打卡已保存'),
+          description: Text('全局统计未同步：${outcome.globalStatsError}'),
         );
       }
     } on GithubCheckinException catch (e) {
@@ -165,8 +163,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
         _fileSha = previousSha;
         _saving = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('打卡同步失败：${e.message}')),
+      showFToast(
+        context: context,
+        variant: FToastVariant.destructive,
+        title: Text('打卡同步失败：${e.message}'),
       );
     } catch (e) {
       if (!mounted) return;
@@ -175,27 +175,29 @@ class _CheckinScreenState extends State<CheckinScreen> {
         _fileSha = previousSha;
         _saving = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('打卡同步失败：$e')),
+      showFToast(
+        context: context,
+        variant: FToastVariant.destructive,
+        title: Text('打卡同步失败：$e'),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
 
     if (kIsWeb) {
-      return _WebHint(cs: cs);
+      return const _WebHint();
     }
 
     if (_loadingToken) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: FCircularProgress());
     }
 
     if (!_repo.hasToken) {
-      return _TokenHint(cs: cs, onOpenSettings: _openSettings);
+      return _TokenHint(onOpenSettings: _openSettings);
     }
 
     final today = _today();
@@ -207,9 +209,9 @@ class _CheckinScreenState extends State<CheckinScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            cs.surfaceContainerHighest.withValues(alpha: 0.35),
-            cs.primaryContainer.withValues(alpha: 0.2),
-            theme.scaffoldBackgroundColor,
+            colors.secondary.withValues(alpha: 0.45),
+            colors.primary.withValues(alpha: 0.08),
+            colors.background,
           ],
         ),
       ),
@@ -230,19 +232,19 @@ class _CheckinScreenState extends State<CheckinScreen> {
                           Expanded(
                             child: Text(
                               '打卡',
-                              style: GoogleFonts.newsreader(
-                                fontSize: 32,
+                              style: typography.xl2.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: cs.onSurface,
+                                color: colors.foreground,
+                                height: 1.1,
                               ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: _openSettings,
-                            tooltip: '设置',
-                            icon: Icon(
-                              Icons.settings_outlined,
-                              color: cs.onSurfaceVariant,
+                          FButton.icon(
+                            variant: FButtonVariant.ghost,
+                            onPress: _openSettings,
+                            child: Icon(
+                              FIcons.settings,
+                              color: colors.mutedForeground,
                             ),
                           ),
                         ],
@@ -250,23 +252,23 @@ class _CheckinScreenState extends State<CheckinScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'ForeverPx / my-ai-memory · checkins（按周）',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        style: typography.xs.copyWith(
+                          color: colors.mutedForeground,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '每次保存会同步 checkins/_global_checkin_stats.json，按周记录各打卡项的次数、目标与是否达标，供周日历展示。',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        style: typography.xs.copyWith(
+                          color: colors.mutedForeground,
                           height: 1.35,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '仅展示与编辑本周（周一至周日）的打卡记录。',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        style: typography.sm.copyWith(
+                          color: colors.mutedForeground,
                           height: 1.4,
                         ),
                       ),
@@ -274,39 +276,18 @@ class _CheckinScreenState extends State<CheckinScreen> {
                         const SizedBox(height: 10),
                         Text(
                           '统计汇总加载失败：$_statsError',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.error,
+                          style: typography.xs.copyWith(
+                            color: colors.error,
                             height: 1.35,
                           ),
                         ),
                       ],
                       if (_loadError != null) ...[
                         const SizedBox(height: 14),
-                        Material(
-                          color: cs.errorContainer.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.error_outline, color: cs.error, size: 22),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _loadError!,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: cs.onErrorContainer,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        FAlert(
+                          variant: FAlertVariant.destructive,
+                          title: Text(_loadError!),
+                          icon: const Icon(FIcons.circleAlert),
                         ),
                       ],
                       const SizedBox(height: 20),
@@ -341,21 +322,18 @@ class _CheckinScreenState extends State<CheckinScreen> {
 }
 
 class _WebHint extends StatelessWidget {
-  const _WebHint({required this.cs});
-
-  final ColorScheme cs;
+  const _WebHint();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+          child: FCard.raw(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -363,13 +341,14 @@ class _WebHint extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.web_asset_outlined, color: cs.primary),
+                      Icon(FIcons.globe, color: colors.primary),
                       const SizedBox(width: 8),
                       Text(
                         'Web 端限制',
-                        style: GoogleFonts.newsreader(
-                          fontSize: 22,
+                        style: typography.xl.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                          height: 1.2,
                         ),
                       ),
                     ],
@@ -378,9 +357,9 @@ class _WebHint extends StatelessWidget {
                   Text(
                     '浏览器无法直接访问 GitHub REST API（跨域策略）。'
                     '请在 iOS、Android 或桌面端运行本应用以同步打卡数据。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: typography.sm.copyWith(
                       height: 1.45,
-                      color: cs.onSurfaceVariant,
+                      color: colors.mutedForeground,
                     ),
                   ),
                 ],
@@ -394,22 +373,20 @@ class _WebHint extends StatelessWidget {
 }
 
 class _TokenHint extends StatelessWidget {
-  const _TokenHint({required this.cs, required this.onOpenSettings});
+  const _TokenHint({required this.onOpenSettings});
 
-  final ColorScheme cs;
   final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Material(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
+          child: FCard.raw(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -417,13 +394,14 @@ class _TokenHint extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.lock_outline, color: cs.primary),
+                      Icon(FIcons.lock, color: colors.primary),
                       const SizedBox(width: 8),
                       Text(
                         '连接私有仓库',
-                        style: GoogleFonts.newsreader(
-                          fontSize: 22,
+                        style: typography.xl.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                          height: 1.2,
                         ),
                       ),
                     ],
@@ -434,16 +412,16 @@ class _TokenHint extends StatelessWidget {
                     'ForeverPx/my-ai-memory 的 checkins 目录（按周），'
                     '并在每次保存后更新 checkins/_global_checkin_stats.json。'
                     '请使用带 repo 权限的 Personal Access Token，并在设置中填写。',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: typography.sm.copyWith(
                       height: 1.45,
-                      color: cs.onSurfaceVariant,
+                      color: colors.mutedForeground,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: onOpenSettings,
-                    icon: const Icon(Icons.settings_outlined),
-                    label: const Text('打开设置并填写 Token'),
+                  FButton(
+                    onPress: onOpenSettings,
+                    prefix: const Icon(FIcons.settings),
+                    child: const Text('打开设置并填写 Token'),
                   ),
                 ],
               ),
