@@ -1,0 +1,25 @@
+lib/collect/collect_compose_screen.dart
+  b1a221f82440e312 26,38-75,78,80,95,111-113,172-184,186-191,193-196,199-206,208-235,238-246,248-249
+lib/diary/diary_compose_screen.dart
+  b1a221f82440e312 31,36-73,76,78,93,113-115,173-185,187-192,194-197,200-207,209-236,239-247,249-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.10",
+  "base_commit_sha": "4e857f9ae279a10b45fca0893a14c5b591dd1935",
+  "prompts": {
+    "b1a221f82440e312": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b1af3a12-83f1-4ea9-a6ce-427360ffab2d",
+        "model": "default"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 239,
+      "total_deletions": 98,
+      "accepted_lines": 236,
+      "overriden_lines": 0
+    }
+  }
+}
