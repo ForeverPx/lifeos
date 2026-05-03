@@ -23,6 +23,7 @@ class CollectComposeScreen extends StatefulWidget {
 
 class _CollectComposeScreenState extends State<CollectComposeScreen> {
   final _body = TextEditingController();
+  final _bodyFocus = FocusNode(debugLabel: 'collect_compose_body');
   bool _busy = false;
   String? _error;
 
@@ -34,8 +35,49 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _body.addListener(_onBodyEdited);
+  }
+
+  void _onBodyEdited() {
+    if (_error != null) {
+      setState(() => _error = null);
+    }
+  }
+
+  Future<void> _handleCloseAttempt() async {
+    if (_busy) return;
+    if (_body.text.trim().isEmpty) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+    final ok = await showFDialog<bool>(
+      context: context,
+      builder: (ctx, style, animation) => FDialog(
+        title: const Text('放弃未保存的内容？'),
+        body: const Text('当前正文尚未保存到 GitHub。'),
+        actions: [
+          FButton(
+            onPress: () => Navigator.of(ctx).pop(true),
+            child: const Text('放弃'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(ctx).pop(false),
+            child: const Text('继续编辑'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) Navigator.of(context).pop();
+  }
+
+  @override
   void dispose() {
+    _body.removeListener(_onBodyEdited);
     _body.dispose();
+    _bodyFocus.dispose();
     super.dispose();
   }
 
@@ -50,6 +92,7 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
       return;
     }
 
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _busy = true;
       _error = null;
@@ -64,6 +107,10 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
         fileName: fileName,
         utf8Content: _body.text.replaceAll('\r\n', '\n'),
       );
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _body.clear();
+      setState(() {});
       if (!mounted) return;
       showFToast(
         context: context,
@@ -122,61 +169,84 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
       );
     }
 
-    return FScaffold(
-      header: FHeader.nested(
-        prefixes: [
-          FButton.icon(
-            variant: FButtonVariant.ghost,
-            onPress: _busy ? null : () => Navigator.of(context).pop(),
-            child: const Icon(FIcons.chevronLeft),
-          ),
-        ],
-        title: const Text('新增收藏'),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Text(
-              'collect/$folder/ · 保存前将调用大模型根据正文生成文件名',
-              style: typography.xs.copyWith(color: colors.mutedForeground),
+    return PopScope(
+      canPop: _body.text.trim().isEmpty && !_busy,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleCloseAttempt();
+      },
+      child: FScaffold(
+        header: FHeader.nested(
+          prefixes: [
+            FButton.icon(
+              variant: FButtonVariant.ghost,
+              onPress: _busy ? null : () => _handleCloseAttempt(),
+              child: const Icon(FIcons.chevronLeft),
             ),
-          ),
-          if (_error != null)
+          ],
+          title: const Text('新增收藏'),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: FAlert(
-                variant: FAlertVariant.destructive,
-                title: Text(_error!),
-                icon: const Icon(FIcons.circleAlert),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                'collect/$folder/ · 保存前将调用大模型根据正文生成文件名',
+                style: typography.xs.copyWith(color: colors.mutedForeground),
               ),
             ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: FTextField(
-                control: FTextFieldControl.managed(controller: _body),
-                label: const Text('正文'),
-                hint: '支持多段长文本…',
-                maxLines: null,
-                expands: true,
-                keyboardType: TextInputType.multiline,
-                enabled: !_busy,
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: FAlert(
+                  variant: FAlertVariant.destructive,
+                  title: Text(_error!),
+                  icon: const Icon(FIcons.circleAlert),
+                ),
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: FTextField(
+                  control: FTextFieldControl.managed(controller: _body),
+                  focusNode: _bodyFocus,
+                  autofocus: true,
+                  label: const Text('正文'),
+                  hint: '支持多段长文本…',
+                  description: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _body,
+                    builder: (context, value, _) {
+                      final n = value.text.characters.length;
+                      return Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '$n 字',
+                          style: typography.xs.copyWith(color: colors.mutedForeground),
+                        ),
+                      );
+                    },
+                  ),
+                  maxLines: null,
+                  expands: true,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  enabled: !_busy,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            child: FButton(
-              onPress: _busy ? null : _submit,
-              prefix: _busy
-                  ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
-                  : const Icon(FIcons.sparkles),
-              child: Text(_busy ? '生成文件名并保存中…' : '生成文件名并保存到 GitHub'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: FButton(
+                onPress: _busy ? null : _submit,
+                prefix: _busy
+                    ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                    : const Icon(FIcons.sparkles),
+                child: Text(_busy ? '生成文件名并保存中…' : '生成文件名并保存到 GitHub'),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
