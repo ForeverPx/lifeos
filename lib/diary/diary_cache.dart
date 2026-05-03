@@ -33,6 +33,16 @@ class DiaryCache {
     await prefs.setString(key, markdown);
   }
 
+  static Future<void> removeDay({
+    required int year,
+    required int month,
+    required int day,
+  }) async {
+    final prefs = await _prefs;
+    final key = dayKey(DateTime(year, month, day));
+    await prefs.remove(key);
+  }
+
   static Future<int> clearAll() async {
     final prefs = await _prefs;
     final keys = prefs.getKeys().where((k) => k.startsWith(_dayPrefix)).toList();

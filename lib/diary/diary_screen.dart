@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../config/token_store.dart';
 import '../config/github_token.dart';
 import '../settings/settings_screen.dart';
+import 'diary_compose_screen.dart';
 import 'diary_models.dart';
 import 'github_diary_repository.dart';
 
@@ -61,6 +62,80 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
     );
     await _loadTokenAndRefresh();
+  }
+
+  Future<void> _deleteEntry(DiaryEntry entry) async {
+    if (_selectedDay == null) return;
+    final ok = await showFDialog<bool>(
+      context: context,
+      builder: (ctx, style, animation) => FDialog(
+        title: const Text('删除这条日记？'),
+        body: Text('将永久从 GitHub 仓库移除该条记录：\n${entry.title}'),
+        actions: [
+          FButton(
+            onPress: () => Navigator.of(ctx).pop(true),
+            child: const Text('删除'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    setState(() {
+      _loadingDay = true;
+      _error = null;
+    });
+    try {
+      await _repo.removeDiaryEntry(
+        year: _visibleMonth.year,
+        month: _visibleMonth.month,
+        day: _selectedDay!,
+        headerLine: entry.headerLine,
+      );
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        icon: const Icon(FIcons.trash2),
+        title: const Text('已删除'),
+      );
+      await _loadMonth();
+      await _loadSelectedDay();
+    } on GithubDiaryException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loadingDay = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loadingDay = false;
+      });
+    }
+  }
+
+  Future<void> _openCompose() async {
+    if (_selectedDay == null) return;
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => DiaryComposeScreen(
+          repo: _repo,
+          year: _visibleMonth.year,
+          month: _visibleMonth.month,
+          day: _selectedDay!,
+        ),
+      ),
+    );
+    if (changed == true && mounted) {
+      await _loadMonth();
+      await _loadSelectedDay();
+    }
   }
 
   Future<void> _loadMonth() async {
@@ -162,21 +237,23 @@ class _DiaryScreenState extends State<DiaryScreen> {
       return _TokenHint(onOpenSettings: _openSettings);
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.secondary.withValues(alpha: 0.45),
-            colors.primary.withValues(alpha: 0.08),
-            colors.background,
-          ],
-        ),
-      ),
-      child: SafeArea(
-        child: CustomScrollView(
-          slivers: [
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.secondary.withValues(alpha: 0.45),
+                colors.primary.withValues(alpha: 0.08),
+                colors.background,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: CustomScrollView(
+              slivers: [
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -206,12 +283,12 @@ class _DiaryScreenState extends State<DiaryScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'ForeverPx / my-ai-memory · daily_notes',
-                      style: typography.xs.copyWith(
-                        color: colors.mutedForeground,
+                      Text(
+                        'ForeverPx/my-ai-memory · 日记 daily_notes',
+                        style: typography.xs.copyWith(
+                          color: colors.mutedForeground,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -289,23 +366,38 @@ class _DiaryScreenState extends State<DiaryScreen> {
                   ),
                 ),
               ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: _EntryCard(entry: _entries[index]),
-                    );
-                  },
-                  childCount: _entries.length,
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _EntryCard(
+                            entry: _entries[index],
+                            onDelete: () => _deleteEntry(_entries[index]),
+                          ),
+                        );
+                      },
+                      childCount: _entries.length,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        if (_selectedDay != null)
+          Positioned(
+            right: 20,
+            bottom: 20,
+            child: FButton(
+              onPress: _openCompose,
+              prefix: const Icon(FIcons.pencil),
+              child: const Text('新增日记'),
+            ),
+          ),
+      ],
     );
   }
 
@@ -354,9 +446,8 @@ class _WebCorsHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '浏览器无法直接访问 GitHub REST API（跨域策略）。'
-                    '请在 iOS、Android 或桌面端运行本应用以同步私有仓库日记；'
-                    '若必须在网页中使用，需要自行部署可转发请求的代理服务。',
+                    '受浏览器 CORS 限制，本应用无法在网页内直接请求 GitHub。'
+                    '请在 iOS、Android 或桌面端使用；若必须在浏览器中使用，需自行搭建可转发的 API 代理。',
                     style: typography.sm.copyWith(
                       height: 1.45,
                       color: colors.mutedForeground,
@@ -408,9 +499,8 @@ class _TokenHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '日记从 GitHub 私有仓库 '
-                    'ForeverPx/my-ai-memory 的 daily_notes 目录读取。'
-                    '请使用带 repo 权限的 Personal Access Token，并在设置中填写：',
+                    '日记读取自 ForeverPx/my-ai-memory 仓库中的 daily_notes 目录。'
+                    '请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,
                       color: colors.mutedForeground,
@@ -420,7 +510,7 @@ class _TokenHint extends StatelessWidget {
                   FButton(
                     onPress: onOpenSettings,
                     prefix: const Icon(FIcons.settings),
-                    child: const Text('打开设置并填写 Token'),
+                    child: const Text('前往设置'),
                   ),
                 ],
               ),
@@ -648,9 +738,13 @@ class _DayCell extends StatelessWidget {
 }
 
 class _EntryCard extends StatelessWidget {
-  const _EntryCard({required this.entry});
+  const _EntryCard({
+    required this.entry,
+    required this.onDelete,
+  });
 
   final DiaryEntry entry;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -689,6 +783,15 @@ class _EntryCard extends StatelessWidget {
                       height: 1.25,
                       color: colors.foreground,
                     ),
+                  ),
+                ),
+                FButton.icon(
+                  variant: FButtonVariant.ghost,
+                  onPress: onDelete,
+                  child: Icon(
+                    FIcons.trash2,
+                    size: 20,
+                    color: colors.mutedForeground,
                   ),
                 ),
               ],

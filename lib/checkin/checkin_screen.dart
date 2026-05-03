@@ -251,7 +251,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'ForeverPx / my-ai-memory · checkins（按周）',
+                        'ForeverPx/my-ai-memory · 打卡（按周）',
                         style: typography.xs.copyWith(
                           color: colors.mutedForeground,
                         ),
@@ -339,8 +339,8 @@ class _WebHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '浏览器无法直接访问 GitHub REST API（跨域策略）。'
-                    '请在 iOS、Android 或桌面端运行本应用以同步打卡数据。',
+                    '受浏览器 CORS 限制，本应用无法在网页内直接请求 GitHub。'
+                    '请在 iOS、Android 或桌面端使用；若必须在浏览器中使用，需自行搭建可转发的 API 代理。',
                     style: typography.sm.copyWith(
                       height: 1.45,
                       color: colors.mutedForeground,
@@ -392,10 +392,8 @@ class _TokenHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '打卡数据写入 GitHub 私有仓库 '
-                    'ForeverPx/my-ai-memory 的 checkins 目录（按周），'
-                    '并在每次保存后更新 checkins/_global_checkin_stats.json。'
-                    '请使用带 repo 权限的 Personal Access Token，并在设置中填写。',
+                    '打卡按周写入 ForeverPx/my-ai-memory 仓库中的 checkins 目录；'
+                    '保存时会同步周统计汇总。请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,
                       color: colors.mutedForeground,
@@ -405,7 +403,7 @@ class _TokenHint extends StatelessWidget {
                   FButton(
                     onPress: onOpenSettings,
                     prefix: const Icon(FIcons.settings),
-                    child: const Text('打开设置并填写 Token'),
+                    child: const Text('前往设置'),
                   ),
                 ],
               ),

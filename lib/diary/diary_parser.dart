@@ -1,5 +1,55 @@
 import 'diary_models.dart';
 
+/// Removes the `## …` block whose first line (after `## `) equals [headerLine] trim-for-trim.
+///
+/// Returns `null` if no matching block. Returns `''` when the file should be deleted (no content left).
+String? removeDiaryBlockByHeaderLine(String raw, String headerLine) {
+  final normalized = raw.replaceAll('\r\n', '\n');
+  final target = headerLine.trim();
+  if (target.isEmpty) return null;
+
+  final parts = normalized.split(RegExp(r'^## ', multiLine: true));
+
+  if (parts.length == 1) {
+    final entries = parseDiaryMarkdown(normalized);
+    final match = entries.where((e) => e.headerLine.trim() == target).length;
+    if (match == 0) return null;
+    if (entries.length == 1) {
+      return '';
+    }
+    return null;
+  }
+
+  final kept = <String>[parts[0]];
+  var removed = false;
+  for (var i = 1; i < parts.length; i++) {
+    final chunk = parts[i];
+    final nl = chunk.indexOf('\n');
+    final firstLine = (nl == -1 ? chunk : chunk.substring(0, nl)).trim();
+    if (firstLine == target) {
+      removed = true;
+      continue;
+    }
+    kept.add(chunk);
+  }
+  if (!removed) return null;
+  return _joinDiarySplitParts(kept).trimRight();
+}
+
+String _joinDiarySplitParts(List<String> kept) {
+  if (kept.length == 1) {
+    return kept[0];
+  }
+  final b = StringBuffer(kept[0]);
+  for (var i = 1; i < kept.length; i++) {
+    final seg = kept[i];
+    if (seg.trim().isEmpty) continue;
+    b.write('## ');
+    b.write(seg);
+  }
+  return b.toString();
+}
+
 /// Parses markdown files where each block starts with `## date | title`
 /// followed by `- source:` and `- tags:` lines.
 List<DiaryEntry> parseDiaryMarkdown(String raw) {
@@ -19,14 +69,37 @@ List<DiaryEntry> parseDiaryMarkdown(String raw) {
 
     String source = '';
     final tags = <String>[];
-    for (final line in rest.split('\n')) {
-      final t = line.trim();
+    final lines = rest.split('\n');
+    var i = 0;
+    while (i < lines.length) {
+      final t = lines[i].trim();
       if (t.startsWith('- source:')) {
-        source = t.substring('- source:'.length).trim();
-      } else if (t.startsWith('- tags:')) {
+        final after = t.substring('- source:'.length);
+        final inline = after.trimLeft();
+        final buf = StringBuffer(inline.trimRight());
+        i++;
+        while (i < lines.length) {
+          final u = lines[i].trim();
+          if (u.startsWith('- tags:')) {
+            final rawTags = u.substring('- tags:'.length).trim();
+            tags.addAll(_parseTagTokens(rawTags));
+            i++;
+            break;
+          }
+          if (buf.isNotEmpty) {
+            buf.writeln();
+          }
+          buf.write(lines[i]);
+          i++;
+        }
+        source = buf.toString();
+        continue;
+      }
+      if (t.startsWith('- tags:')) {
         final rawTags = t.substring('- tags:'.length).trim();
         tags.addAll(_parseTagTokens(rawTags));
       }
+      i++;
     }
 
     final pipe = firstLine.lastIndexOf(' | ');

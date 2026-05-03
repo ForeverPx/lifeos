@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../config/llm_prefs_store.dart';
 import '../config/theme_prefs.dart';
 import '../config/token_store.dart';
 import '../collect/collect_cache.dart';
 import '../diary/diary_cache.dart';
+import '../diary/llm_diary_tagger.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, this.onGitHubTokenChanged});
@@ -18,11 +20,18 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _controller = TextEditingController();
+  final _llmUrlController = TextEditingController();
+  final _llmModelController = TextEditingController();
+  final _llmKeyController = TextEditingController();
   bool _loading = true;
   bool _saving = false;
+  bool _savingLlm = false;
+  bool _testingLlm = false;
   bool _clearingCache = false;
   bool _clearingCollectCache = false;
   String? _savedHint;
+  String? _savedLlmHint;
+  LlmProviderKind _llmProvider = LlmProviderKind.openAiCompatible;
 
   @override
   void initState() {
@@ -32,9 +41,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final token = await TokenStore.readGitHubToken();
+    final provider = await LlmPrefsStore.readProvider();
+    final llmUrl = await LlmPrefsStore.readBaseUrl();
+    final llmModel = await LlmPrefsStore.readModel();
+    final llmKey = await LlmPrefsStore.readApiKey();
     if (!mounted) return;
     setState(() {
       _controller.text = token;
+      _llmProvider = provider;
+      _llmUrlController.text = llmUrl;
+      _llmModelController.text = llmModel;
+      _llmKeyController.text = llmKey;
       _loading = false;
     });
   }
@@ -42,6 +59,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _llmUrlController.dispose();
+    _llmModelController.dispose();
+    _llmKeyController.dispose();
     super.dispose();
   }
 
@@ -62,6 +82,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         setState(() => _saving = false);
       }
+    }
+  }
+
+  Future<void> _saveLlm() async {
+    setState(() {
+      _savingLlm = true;
+      _savedLlmHint = null;
+    });
+    try {
+      await LlmPrefsStore.writeProvider(_llmProvider);
+      await LlmPrefsStore.writeBaseUrl(_llmUrlController.text);
+      await LlmPrefsStore.writeModel(_llmModelController.text);
+      await LlmPrefsStore.writeApiKey(_llmKeyController.text);
+      if (mounted) {
+        setState(() {
+          _savedLlmHint = '已保存';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _savingLlm = false);
+      }
+    }
+  }
+
+  Future<void> _testLlmConnection() async {
+    if (_testingLlm || _savingLlm) return;
+    setState(() => _testingLlm = true);
+    try {
+      final msg = await LlmDiaryTagger.verifyConnection(
+        provider: _llmProvider,
+        baseUrl: _llmUrlController.text,
+        apiKey: _llmKeyController.text,
+        model: _llmModelController.text,
+      );
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        icon: const Icon(FIcons.cloudCheck),
+        title: Text(msg),
+        duration: const Duration(seconds: 6),
+      );
+    } on LlmDiaryTaggerException catch (e) {
+      if (!mounted) return;
+      final body = e.body;
+      final typo = context.theme.typography;
+      showFToast(
+        context: context,
+        variant: FToastVariant.destructive,
+        icon: const Icon(FIcons.circleAlert),
+        title: Text(e.message),
+        description: body != null && body.trim().isNotEmpty
+            ? Text(
+                body.length > 320 ? '${body.substring(0, 320)}…' : body,
+                style: typo.xs3.copyWith(height: 1.35),
+              )
+            : null,
+        duration: const Duration(seconds: 8),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        variant: FToastVariant.destructive,
+        icon: const Icon(FIcons.circleAlert),
+        title: Text('请求异常：$e'),
+        duration: const Duration(seconds: 6),
+      );
+    } finally {
+      if (mounted) setState(() => _testingLlm = false);
     }
   }
 
@@ -214,7 +304,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '用于读取私有仓库中的日记内容。建议使用 fine-grained token，并只授予需要访问的仓库权限。',
+                          '用于访问 GitHub 私有库 ForeverPx/my-ai-memory（日记、收藏、打卡等）。'
+                          '建议使用 fine-grained PAT，仅授予该仓库的 Contents 与 Metadata 读/写所需权限。',
                           style: typography.sm.copyWith(
                             height: 1.45,
                             color: colors.mutedForeground,
@@ -232,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (kIsWeb) ...[
                           const SizedBox(height: 10),
                           Text(
-                            '提示：Web 端会存到浏览器本地存储，且浏览器无法直接访问 GitHub API（跨域限制），日记同步建议在移动端/桌面端使用。',
+                            '提示：Token 会保存在本机浏览器存储。受 CORS 限制，网页端无法直接调用 GitHub API，同步请在 iOS / Android / 桌面端完成。',
                             style: typography.xs3.copyWith(
                               height: 1.4,
                               color: colors.mutedForeground,
@@ -260,6 +351,132 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ],
                           ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  '大模型（日记打标签）',
+                  style: typography.xl2.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colors.foreground,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FCard.raw(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'API 形态',
+                          style: typography.lg.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        FTileGroup(
+                          children: [
+                            FTile(
+                              title: const Text('OpenAI 兼容'),
+                              subtitle: const Text('POST …/v1/chat/completions'),
+                              suffix: _llmProvider == LlmProviderKind.openAiCompatible
+                                  ? Icon(FIcons.check, color: colors.primary)
+                                  : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                              onPress: () => setState(
+                                () => _llmProvider = LlmProviderKind.openAiCompatible,
+                              ),
+                            ),
+                            FTile(
+                              title: const Text('Anthropic'),
+                              subtitle: const Text('POST …/v1/messages'),
+                              suffix: _llmProvider == LlmProviderKind.anthropic
+                                  ? Icon(FIcons.check, color: colors.primary)
+                                  : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                              onPress: () =>
+                                  setState(() => _llmProvider = LlmProviderKind.anthropic),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'API 根地址',
+                          style: typography.lg.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'OpenAI 兼容示例：https://api.openai.com/v1 或自建网关根路径。'
+                          'Anthropic 示例：https://api.anthropic.com',
+                          style: typography.sm.copyWith(
+                            height: 1.45,
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        FTextField(
+                          control: FTextFieldControl.managed(controller: _llmUrlController),
+                          label: const Text('Base URL'),
+                          hint: 'https://…',
+                          keyboardType: TextInputType.url,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                        ),
+                        const SizedBox(height: 14),
+                        FTextField(
+                          control: FTextFieldControl.managed(controller: _llmModelController),
+                          label: const Text('模型 ID'),
+                          hint: 'gpt-4o-mini / claude-sonnet-4-20250514',
+                          autocorrect: false,
+                          enableSuggestions: false,
+                        ),
+                        const SizedBox(height: 14),
+                        FTextField.password(
+                          control: FTextFieldControl.managed(controller: _llmKeyController),
+                          label: const Text('API Key'),
+                          hint: 'sk-… 或 Anthropic secret key',
+                          keyboardType: TextInputType.visiblePassword,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            FButton(
+                              variant: FButtonVariant.outline,
+                              onPress: (_testingLlm || _savingLlm) ? null : _testLlmConnection,
+                              prefix: _testingLlm
+                                  ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                                  : const Icon(FIcons.cloudCheck),
+                              child: Text(_testingLlm ? '测试中…' : '测试连接'),
+                            ),
+                            FButton(
+                              onPress: (_savingLlm || _testingLlm) ? null : _saveLlm,
+                              prefix: _savingLlm
+                                  ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                                  : const Icon(FIcons.save),
+                              child: Text(_savingLlm ? '保存中…' : '保存大模型配置'),
+                            ),
+                            if (_savedLlmHint != null)
+                              Text(
+                                _savedLlmHint!,
+                                style: typography.sm.copyWith(
+                                  color: colors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '「测试连接」使用上方输入框中的配置，无需先点保存。',
+                          style: typography.xs3.copyWith(
+                            height: 1.4,
+                            color: colors.mutedForeground,
+                          ),
                         ),
                       ],
                     ),

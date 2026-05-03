@@ -445,7 +445,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         ),
                         const SizedBox(height: 28),
                         Text(
-                          '快捷入口',
+                          '快速打开',
                           style: typography.sm.copyWith(
                             color: colors.mutedForeground,
                             letterSpacing: 0.2,
@@ -479,7 +479,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             variant: FButtonVariant.ghost,
                             onPress: _openSettings,
                             prefix: Icon(FIcons.slidersHorizontal, size: 20, color: colors.primary),
-                            child: Text('GitHub 与缓存设置', style: TextStyle(color: colors.primary)),
+                            child: Text('设置与缓存', style: TextStyle(color: colors.primary)),
                           ),
                         ),
                       ],
@@ -649,7 +649,7 @@ class _DiaryTodayCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: entries.isEmpty
               ? Text(
-                  '今天还没有日记条目。点按前往日历选择日期或新建记录。',
+                  '今天还没有日记。点按进入「日记」查看日历或补充记录。',
                   style: typography.sm.copyWith(
                     color: colors.mutedForeground,
                     height: 1.45,
@@ -718,7 +718,7 @@ class _CollectTodayCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: items.isEmpty
               ? Text(
-                  '今天还没有收藏。在仓库 collect/ 对应日期目录下添加条目后会显示在这里。',
+                  '今天还没有收藏。将 .md / .txt 等放入 collect/ 下的日期文件夹后，点按进入「收藏」下拉同步。',
                   style: typography.sm.copyWith(
                     color: colors.mutedForeground,
                     height: 1.45,
@@ -1005,8 +1005,8 @@ class _TokenHintBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '首页摘要、日记与收藏都从 GitHub 私有仓库 ForeverPx/my-ai-memory 读取。'
-                    '请使用带 repo 权限的 Personal Access Token，并在设置中填写。',
+                    'LifeOS 从 GitHub 私有库 ForeverPx/my-ai-memory 读取首页摘要、日记与收藏。'
+                    '请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,
                       color: colors.mutedForeground,
@@ -1016,7 +1016,7 @@ class _TokenHintBody extends StatelessWidget {
                   FButton(
                     onPress: onOpenSettings,
                     prefix: const Icon(FIcons.settings),
-                    child: const Text('打开设置并填写 Token'),
+                    child: const Text('前往设置'),
                   ),
                 ],
               ),
@@ -1062,9 +1062,8 @@ class _WebCorsHintBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '浏览器无法直接访问 GitHub REST API（跨域策略）。'
-                    '请在 iOS、Android 或桌面端运行本应用以同步私有仓库；'
-                    '若必须在网页中使用，需要自行部署可转发请求的代理服务。',
+                    '受浏览器 CORS 限制，本应用无法在网页内直接请求 GitHub。'
+                    '请在 iOS、Android 或桌面端使用；若必须在浏览器中使用，需自行搭建可转发的 API 代理。',
                     style: typography.sm.copyWith(
                       height: 1.45,
                       color: colors.mutedForeground,
