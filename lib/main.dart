@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'checkin/checkin_screen.dart';
 import 'collect/collect_screen.dart';
 import 'diary/diary_screen.dart';
 import 'home/home_dashboard.dart';
@@ -62,6 +63,7 @@ class _HomeShellState extends State<HomeShell> {
           HomeDashboard(onOpenTab: (i) => setState(() => _index = i)),
           const DiaryScreen(),
           const CollectScreen(),
+          const CheckinScreen(),
         ],
       ),
       bottomNavigationBar: MediaQuery.textScalerOf(context).scale(1) > 1.15
@@ -95,6 +97,11 @@ class _HomeShellState extends State<HomeShell> {
           icon: Icon(Icons.bookmark_outline, color: cs.onSurfaceVariant),
           selectedIcon: Icon(Icons.bookmark_rounded, color: cs.primary),
           label: '收藏',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.task_alt_outlined, color: cs.onSurfaceVariant),
+          selectedIcon: Icon(Icons.task_alt_rounded, color: cs.primary),
+          label: '打卡',
         ),
       ],
     );

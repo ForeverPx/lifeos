@@ -16,7 +16,9 @@ void main() {
     // `pumpAndSettle` can time out in widget tests. A simple pump is enough for
     // a smoke test.
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('LifeOS'), findsOneWidget);
+    // Shell always shows bottom nav; home title may be loading or token hint.
+    expect(find.text('首页'), findsOneWidget);
   });
 }

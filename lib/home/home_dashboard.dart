@@ -13,7 +13,7 @@ import '../diary/diary_models.dart';
 import '../diary/github_diary_repository.dart';
 import '../settings/settings_screen.dart';
 
-/// Bottom tab index for [LifeOSApp] shell: 1 = 日记, 2 = 收藏.
+/// Bottom tab index for [LifeOSApp] shell: 1 = 日记, 2 = 收藏, 3 = 打卡.
 typedef HomeOpenTab = void Function(int tabIndex);
 
 class HomeDashboard extends StatefulWidget {
