@@ -27,7 +27,8 @@ bool _useTouchForuiTheme() {
 FThemeData _lifeosForuiTheme({required bool light}) {
   final touch = _useTouchForuiTheme();
   if (light) {
-    return touch ? FThemes.neutral.light.touch : FThemes.neutral.light.desktop;
+    // Blue accent for light mode; dark mode stays neutral gray.
+    return touch ? FThemes.blue.light.touch : FThemes.blue.light.desktop;
   }
   return touch ? FThemes.neutral.dark.touch : FThemes.neutral.dark.desktop;
 }
