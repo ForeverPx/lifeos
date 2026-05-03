@@ -278,14 +278,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return '今日收藏';
   }
 
-  String? _collectSectionCaption(DateTime today) {
-    if (_collectToday.isEmpty) return null;
-    if (_collectSummaryDay != null && !_isSameCalendarDay(_collectSummaryDay!, today)) {
-      return '今天暂无记录，以下为 ${DateFormat('y年M月d日', 'zh_CN').format(_collectSummaryDay!)} 最近一条';
-    }
-    return null;
-  }
-
   bool _isRecentDiaryNotToday(DateTime today) =>
       _diaryToday.isNotEmpty &&
       _diarySummaryDay != null &&
@@ -435,7 +427,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         _SectionTitle(
                           icon: FIcons.bookmark,
                           label: _collectSectionLabel(today),
-                          caption: _collectSectionCaption(today),
                         ),
                         const SizedBox(height: 10),
                         _CollectTodayCard(
@@ -758,17 +749,6 @@ class _CollectTodayCard extends StatelessWidget {
                         ),
                       ],
                     ],
-                    if (items.length > 3)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text(
-                          '共 ${items.length} 条，点按查看全部',
-                          style: typography.xs2.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
         ),

@@ -13,6 +13,24 @@ import 'collect_models.dart';
 import 'collect_parser.dart';
 import 'github_collect_repository.dart';
 
+/// Matches each `[segment]` in a search string, including adjacent `[a][b]`.
+final _bracketSearchToken = RegExp(r'\[([^\]]+)\]');
+
+List<String> _bracketSearchTokensLower(String qLower) {
+  return _bracketSearchToken
+      .allMatches(qLower)
+      .map((m) => m.group(1)!.trim().toLowerCase())
+      .where((s) => s.isNotEmpty)
+      .toList();
+}
+
+String _searchOutsideBracketsLower(String qLower) {
+  return qLower
+      .replaceAll(_bracketSearchToken, ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
 class CollectScreen extends StatefulWidget {
   const CollectScreen({super.key});
 
@@ -392,7 +410,16 @@ class _CollectScreenState extends State<CollectScreen> {
   bool _matchesQuery(CollectItem item, String qLower) {
     if (qLower.isEmpty) return true;
     final hay = '${item.title}\n${item.fileName}\n${item.body}'.toLowerCase();
-    return hay.contains(qLower);
+    final tokens = _bracketSearchTokensLower(qLower);
+    if (tokens.isEmpty) {
+      return hay.contains(qLower);
+    }
+    for (final t in tokens) {
+      if (!hay.contains(t)) return false;
+    }
+    final rest = _searchOutsideBracketsLower(qLower);
+    if (rest.isNotEmpty && !hay.contains(rest)) return false;
+    return true;
   }
 }
 
