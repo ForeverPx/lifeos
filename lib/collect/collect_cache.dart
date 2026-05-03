@@ -47,5 +47,10 @@ class CollectCache {
     }
     return removed;
   }
+
+  static Future<void> removeFile(String path) async {
+    final prefs = await _prefs;
+    await prefs.remove(_key(path));
+  }
 }
 

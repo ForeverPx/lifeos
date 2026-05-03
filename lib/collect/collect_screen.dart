@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
 import '../settings/settings_screen.dart';
+import 'collect_compose_screen.dart';
 import 'collect_models.dart';
 import 'collect_parser.dart';
 import 'github_collect_repository.dart';
@@ -88,6 +89,20 @@ class _CollectScreenState extends State<CollectScreen> {
       ),
     );
     await _loadTokenAndRefresh();
+  }
+
+  Future<void> _openCompose() async {
+    final n = DateTime.now();
+    final day = DateTime(n.year, n.month, n.day);
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CollectComposeScreen(
+          repo: _repo,
+          day: day,
+        ),
+      ),
+    );
+    if (changed == true && mounted) await _refresh();
   }
 
   Future<void> _refresh() async {
@@ -203,10 +218,12 @@ class _CollectScreenState extends State<CollectScreen> {
         ),
       ),
       child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: CustomScrollView(
-            slivers: [
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                slivers: [
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -367,7 +384,7 @@ class _CollectScreenState extends State<CollectScreen> {
                   ),
                 ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -387,6 +404,8 @@ class _CollectScreenState extends State<CollectScreen> {
                           items: items,
                           loading: _loading && isPlannedToLoad && !isLoaded,
                           showNotLoadedHint: !isPlannedToLoad && !isLoaded,
+                          repo: _repo,
+                          onCollectChanged: _refresh,
                         ),
                       );
                     },
@@ -394,8 +413,19 @@ class _CollectScreenState extends State<CollectScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: FButton(
+                onPress: _openCompose,
+                prefix: const Icon(FIcons.bookmark),
+                child: const Text('新增收藏'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -429,12 +459,16 @@ class _DaySection extends StatelessWidget {
     required this.items,
     required this.loading,
     required this.showNotLoadedHint,
+    required this.repo,
+    required this.onCollectChanged,
   });
 
   final DateTime day;
   final List<CollectItem> items;
   final bool loading;
   final bool showNotLoadedHint;
+  final GithubCollectRepository repo;
+  final Future<void> Function() onCollectChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -485,7 +519,11 @@ class _DaySection extends StatelessWidget {
                 ),
               ),
             for (final item in items) ...[
-              _CollectCard(item: item),
+              _CollectCard(
+                item: item,
+                repo: repo,
+                onCollectChanged: onCollectChanged,
+              ),
               const SizedBox(height: 12),
             ],
             if (items.isNotEmpty) const SizedBox(height: 2),
@@ -497,9 +535,15 @@ class _DaySection extends StatelessWidget {
 }
 
 class _CollectCard extends StatelessWidget {
-  const _CollectCard({required this.item});
+  const _CollectCard({
+    required this.item,
+    required this.repo,
+    required this.onCollectChanged,
+  });
 
   final CollectItem item;
+  final GithubCollectRepository repo;
+  final Future<void> Function() onCollectChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -514,7 +558,11 @@ class _CollectCard extends StatelessWidget {
             mainAxisMaxRatio: 0.88,
             builder: (ctx) => ColoredBox(
               color: FTheme.of(ctx).colors.background,
-              child: _CollectDetailSheet(item: item),
+              child: _CollectDetailSheet(
+                item: item,
+                repo: repo,
+                onCollectChanged: onCollectChanged,
+              ),
             ),
           );
         },
@@ -592,16 +640,84 @@ MarkdownStyleSheet _collectMarkdownSheet(ThemeData theme, FColors colors, FTypog
   );
 }
 
-class _CollectDetailSheet extends StatelessWidget {
-  const _CollectDetailSheet({required this.item});
+class _CollectDetailSheet extends StatefulWidget {
+  const _CollectDetailSheet({
+    required this.item,
+    required this.repo,
+    required this.onCollectChanged,
+  });
 
   final CollectItem item;
+  final GithubCollectRepository repo;
+  final Future<void> Function() onCollectChanged;
+
+  @override
+  State<_CollectDetailSheet> createState() => _CollectDetailSheetState();
+}
+
+class _CollectDetailSheetState extends State<_CollectDetailSheet> {
+  bool _deleting = false;
+  String? _deleteError;
+
+  Future<void> _confirmDelete() async {
+    final ok = await showFDialog<bool>(
+      context: context,
+      builder: (ctx, style, animation) => FDialog(
+        title: const Text('删除这条收藏？'),
+        body: Text(
+          '将永久从 GitHub 仓库移除该文件：\n${widget.item.fileName}\n${widget.item.path}',
+        ),
+        actions: [
+          FButton(
+            onPress: () => Navigator.of(ctx).pop(true),
+            child: const Text('删除'),
+          ),
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() {
+      _deleting = true;
+      _deleteError = null;
+    });
+    try {
+      await widget.repo.deleteCollectFile(path: widget.item.path);
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        icon: const Icon(FIcons.trash2),
+        title: const Text('已删除'),
+      );
+      Navigator.of(context).pop();
+      await widget.onCollectChanged();
+    } on GithubCollectException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _deleting = false;
+        _deleteError = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _deleting = false;
+        _deleteError = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom +
+        MediaQuery.paddingOf(context).bottom;
     return ColoredBox(
       color: colors.background,
       child: Column(
@@ -613,7 +729,7 @@ class _CollectDetailSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    item.title,
+                    widget.item.title,
                     style: typography.xl.copyWith(
                       fontWeight: FontWeight.w600,
                       color: colors.foreground,
@@ -623,7 +739,7 @@ class _CollectDetailSheet extends StatelessWidget {
                 ),
                 FButton.icon(
                   variant: FButtonVariant.ghost,
-                  onPress: () => Navigator.of(context).pop(),
+                  onPress: _deleting ? null : () => Navigator.of(context).pop(),
                   child: const Icon(FIcons.x),
                 ),
               ],
@@ -632,15 +748,15 @@ class _CollectDetailSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
-              item.path,
+              widget.item.path,
               style: typography.xs.copyWith(color: colors.mutedForeground),
             ),
           ),
           Expanded(
             child: SelectionArea(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
-                child: item.body.trim().isEmpty
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: widget.item.body.trim().isEmpty
                     ? Text(
                         '（内容为空）',
                         style: typography.sm.copyWith(
@@ -649,10 +765,30 @@ class _CollectDetailSheet extends StatelessWidget {
                         ),
                       )
                     : MarkdownBody(
-                        data: item.body,
+                        data: widget.item.body,
                         styleSheet: _collectMarkdownSheet(theme, colors, typography),
                       ),
               ),
+            ),
+          ),
+          if (_deleteError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: FAlert(
+                variant: FAlertVariant.destructive,
+                title: Text(_deleteError!),
+                icon: const Icon(FIcons.circleAlert),
+              ),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
+            child: FButton(
+              variant: FButtonVariant.outline,
+              onPress: _deleting ? null : _confirmDelete,
+              prefix: _deleting
+                  ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                  : const Icon(FIcons.trash2),
+              child: Text(_deleting ? '删除中…' : '删除该文件'),
             ),
           ),
         ],
