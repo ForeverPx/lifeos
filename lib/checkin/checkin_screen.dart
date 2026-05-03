@@ -256,22 +256,6 @@ class _CheckinScreenState extends State<CheckinScreen> {
                           color: colors.mutedForeground,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '每次保存会同步 checkins/_global_checkin_stats.json，按周记录各打卡项的次数、目标与是否达标，供周日历展示。',
-                        style: typography.xs.copyWith(
-                          color: colors.mutedForeground,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '仅展示与编辑本周（周一至周日）的打卡记录。',
-                        style: typography.sm.copyWith(
-                          color: colors.mutedForeground,
-                          height: 1.4,
-                        ),
-                      ),
                       if (_statsError != null) ...[
                         const SizedBox(height: 10),
                         Text(
