@@ -5,23 +5,31 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'checkin/checkin_screen.dart';
 import 'collect/collect_screen.dart';
+import 'config/theme_prefs.dart';
 import 'diary/diary_screen.dart';
 import 'home/home_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_CN');
+  await ThemePrefs.load();
   runApp(const LifeOSApp());
 }
 
-FThemeData _lifeosForuiTheme() {
+bool _useTouchForuiTheme() {
   return const <TargetPlatform>{
     TargetPlatform.android,
     TargetPlatform.iOS,
     TargetPlatform.fuchsia,
-  }.contains(defaultTargetPlatform)
-      ? FThemes.neutral.dark.touch
-      : FThemes.neutral.dark.desktop;
+  }.contains(defaultTargetPlatform);
+}
+
+FThemeData _lifeosForuiTheme({required bool light}) {
+  final touch = _useTouchForuiTheme();
+  if (light) {
+    return touch ? FThemes.neutral.light.touch : FThemes.neutral.light.desktop;
+  }
+  return touch ? FThemes.neutral.dark.touch : FThemes.neutral.dark.desktop;
 }
 
 class LifeOSApp extends StatelessWidget {
@@ -29,23 +37,32 @@ class LifeOSApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fTheme = _lifeosForuiTheme();
-    final materialTheme = fTheme.toApproximateMaterialTheme();
-    return MaterialApp(
-      title: 'LifeOS',
-      theme: materialTheme,
-      darkTheme: materialTheme,
-      themeMode: ThemeMode.dark,
-      locale: const Locale('zh', 'CN'),
-      supportedLocales: FLocalizations.supportedLocales,
-      localizationsDelegates: FLocalizations.localizationsDelegates,
-      builder: (_, child) => FTheme(
-        data: fTheme,
-        child: FToaster(
-          child: FTooltipGroup(child: child ?? const SizedBox.shrink()),
-        ),
-      ),
-      home: const HomeShell(),
+    return ValueListenableBuilder<AppThemeMode>(
+      valueListenable: ThemePrefs.notifier,
+      builder: (context, pref, _) {
+        final fLight = _lifeosForuiTheme(light: true);
+        final fDark = _lifeosForuiTheme(light: false);
+        return MaterialApp(
+          title: 'LifeOS',
+          theme: fLight.toApproximateMaterialTheme(),
+          darkTheme: fDark.toApproximateMaterialTheme(),
+          themeMode: pref.themeMode,
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: FLocalizations.supportedLocales,
+          localizationsDelegates: FLocalizations.localizationsDelegates,
+          builder: (ctx, child) {
+            final brightness = Theme.of(ctx).brightness;
+            final fTheme = brightness == Brightness.dark ? fDark : fLight;
+            return FTheme(
+              data: fTheme,
+              child: FToaster(
+                child: FTooltipGroup(child: child ?? const SizedBox.shrink()),
+              ),
+            );
+          },
+          home: const HomeShell(),
+        );
+      },
     );
   }
 }

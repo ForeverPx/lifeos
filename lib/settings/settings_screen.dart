@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../config/theme_prefs.dart';
 import '../config/token_store.dart';
 import '../collect/collect_cache.dart';
 import '../diary/diary_cache.dart';
@@ -153,6 +154,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               children: [
+                Text(
+                  '外观',
+                  style: typography.xl2.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colors.foreground,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FTileGroup(
+                  children: [
+                    FTile(
+                      prefix: Icon(FIcons.sunMoon, color: colors.mutedForeground),
+                      title: const Text('跟随系统'),
+                      subtitle: const Text('根据系统浅色 / 深色自动切换'),
+                      suffix: ThemePrefs.notifier.value == AppThemeMode.system
+                          ? Icon(FIcons.check, color: colors.primary)
+                          : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                      onPress: () => ThemePrefs.set(AppThemeMode.system),
+                    ),
+                    FTile(
+                      prefix: Icon(FIcons.sun, color: colors.mutedForeground),
+                      title: const Text('亮色'),
+                      subtitle: const Text('始终使用浅色界面'),
+                      suffix: ThemePrefs.notifier.value == AppThemeMode.light
+                          ? Icon(FIcons.check, color: colors.primary)
+                          : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                      onPress: () => ThemePrefs.set(AppThemeMode.light),
+                    ),
+                    FTile(
+                      prefix: Icon(FIcons.moon, color: colors.mutedForeground),
+                      title: const Text('暗色'),
+                      subtitle: const Text('始终使用深色界面'),
+                      suffix: ThemePrefs.notifier.value == AppThemeMode.dark
+                          ? Icon(FIcons.check, color: colors.primary)
+                          : Icon(FIcons.chevronRight, color: colors.mutedForeground),
+                      onPress: () => ThemePrefs.set(AppThemeMode.dark),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'GitHub',
                   style: typography.xl2.copyWith(
