@@ -1,0 +1,37 @@
+lib/checkin/checkin_week.dart
+  0c9ef92a67d8e53d 1-60
+lib/checkin/checkin_week_panel.dart
+  0c9ef92a67d8e53d 1-289
+test/widget_test.dart
+  0c9ef92a67d8e53d 19,21-22
+lib/checkin/github_checkin_repository.dart
+  0c9ef92a67d8e53d 1-147
+lib/checkin/checkin_models.dart
+  0c9ef92a67d8e53d 1-88
+lib/home/home_dashboard.dart
+  0c9ef92a67d8e53d 16
+lib/main.dart
+  0c9ef92a67d8e53d 5,66,101-105
+lib/checkin/checkin_screen.dart
+  0c9ef92a67d8e53d 1-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.10",
+  "base_commit_sha": "726948dd75118a7493d5c15fe3b669910cba3f8a",
+  "prompts": {
+    "0c9ef92a67d8e53d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a5b2847a-4947-4a44-8f51-3e238fe126ed",
+        "model": "default"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 1144,
+      "total_deletions": 159,
+      "accepted_lines": 990,
+      "overriden_lines": 0
+    }
+  }
+}
