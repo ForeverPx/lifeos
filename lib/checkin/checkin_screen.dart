@@ -5,8 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
 import '../settings/settings_screen.dart';
+import 'checkin_global_stats.dart';
 import 'checkin_models.dart';
 import 'checkin_week.dart';
+import 'checkin_week_calendar.dart';
 import 'checkin_week_panel.dart';
 import 'github_checkin_repository.dart';
 
@@ -26,6 +28,9 @@ class _CheckinScreenState extends State<CheckinScreen> {
   String? _fileSha;
   String? _loadError;
   bool _saving = false;
+
+  CheckinGlobalStatsDocument _globalStats = CheckinGlobalStatsDocument.empty();
+  String? _statsError;
 
   @override
   void initState() {
@@ -68,11 +73,26 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _loadError = null;
     });
     try {
-      final snap = await _repo.fetchWeek(bounds.weekId);
+      final weekFuture = _repo.fetchWeek(bounds.weekId);
+      final statsFuture = _repo.fetchGlobalStats();
+      final weekSnap = await weekFuture;
+      CheckinGlobalStatsSnapshot statsSnap;
+      String? statsLoadErr;
+      try {
+        statsSnap = await statsFuture;
+      } catch (e) {
+        statsSnap = CheckinGlobalStatsSnapshot(
+          document: CheckinGlobalStatsDocument.empty(),
+          fileSha: null,
+        );
+        statsLoadErr = e.toString();
+      }
       if (!mounted) return;
       setState(() {
-        _state = snap.state;
-        _fileSha = snap.fileSha;
+        _state = weekSnap.state;
+        _fileSha = weekSnap.fileSha;
+        _globalStats = statsSnap.document;
+        _statsError = statsLoadErr;
         _loadingWeek = false;
         _loadError = null;
       });
@@ -111,16 +131,33 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _loadError = null;
     });
     try {
-      final newSha = await _repo.saveWeek(
+      final outcome = await _repo.saveWeek(
         weekId: bounds.weekId,
         state: next,
         previousSha: previousSha,
       );
       if (!mounted) return;
       setState(() {
-        _fileSha = newSha;
+        _fileSha = outcome.weekFileSha;
+        if (outcome.globalStatsUpdated && outcome.globalStatsDocument != null) {
+          _globalStats = outcome.globalStatsDocument!;
+          _statsError = null;
+        } else if (!outcome.globalStatsUpdated) {
+          _statsError = outcome.globalStatsError;
+        }
         _saving = false;
       });
+      if (!outcome.globalStatsUpdated &&
+          outcome.globalStatsError != null &&
+          mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '周打卡已保存，全局统计未同步：${outcome.globalStatsError}',
+            ),
+          ),
+        );
+      }
     } on GithubCheckinException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -217,6 +254,14 @@ class _CheckinScreenState extends State<CheckinScreen> {
                           color: cs.onSurfaceVariant,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '每次保存会同步 checkins/_global_checkin_stats.json，按周记录各打卡项的次数、目标与是否达标，供周日历展示。',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.35,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         '仅展示与编辑本周（周一至周日）的打卡记录。',
@@ -225,6 +270,16 @@ class _CheckinScreenState extends State<CheckinScreen> {
                           height: 1.4,
                         ),
                       ),
+                      if (_statsError != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          '统计汇总加载失败：$_statsError',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: cs.error,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
                       if (_loadError != null) ...[
                         const SizedBox(height: 14),
                         Material(
@@ -263,6 +318,14 @@ class _CheckinScreenState extends State<CheckinScreen> {
                         saving: _saving,
                         showHeading: false,
                         onToggle: _toggle,
+                      ),
+                      const SizedBox(height: 28),
+                      CheckinRecentWeeksCalendar(
+                        weeks: CheckinWeekBounds.lastNWeeksNewestFirst(today, 12),
+                        statsByWeekId: _globalStats.weeks,
+                        currentWeekId: bounds.weekId,
+                        currentWeekLiveState: _state,
+                        loading: _loadingWeek,
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -368,7 +431,8 @@ class _TokenHint extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     '打卡数据写入 GitHub 私有仓库 '
-                    'ForeverPx/my-ai-memory 的 checkins 目录（按周）。'
+                    'ForeverPx/my-ai-memory 的 checkins 目录（按周），'
+                    '并在每次保存后更新 checkins/_global_checkin_stats.json。'
                     '请使用带 repo 权限的 Personal Access Token，并在设置中填写。',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       height: 1.45,

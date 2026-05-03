@@ -57,4 +57,32 @@ class CheckinWeekBounds {
     }
     return n;
   }
+
+  /// Parses `YYYY-Www` (ISO week-year + week number) into the same bounds as [forLocalDate] for that week.
+  static CheckinWeekBounds? tryParseWeekId(String weekId) {
+    final m = RegExp(r'^(\d{4})-W(\d{1,2})$').firstMatch(weekId.trim());
+    if (m == null) return null;
+    final isoYear = int.parse(m.group(1)!);
+    final w = int.parse(m.group(2)!);
+    if (w < 1 || w > 53) return null;
+    final jan4 = DateTime(isoYear, 1, 4);
+    final week1Monday = jan4.subtract(Duration(days: jan4.weekday - 1));
+    final monday = week1Monday.add(Duration(days: (w - 1) * 7));
+    final probe = DateTime(monday.year, monday.month, monday.day);
+    return forLocalDate(probe);
+  }
+
+  /// Newest first: current week (from [any]), then previous weeks, [count] entries total.
+  static List<CheckinWeekBounds> lastNWeeksNewestFirst(DateTime any, int count) {
+    final n = count < 1 ? 1 : count;
+    final out = <CheckinWeekBounds>[];
+    var b = forLocalDate(any);
+    for (var i = 0; i < n; i++) {
+      out.add(b);
+      final prevMonday = DateTime(b.monday.year, b.monday.month, b.monday.day)
+          .subtract(const Duration(days: 7));
+      b = forLocalDate(prevMonday);
+    }
+    return out;
+  }
 }
