@@ -1,4 +1,4 @@
-/// Fixed habit list stored under `checkins/<weekId>/checkin.json` in my-ai-memory.
+/// Fixed habit list stored under `checkins/<weekId>/checkin.json` in the data repo.
 class CheckinProjectDef {
   const CheckinProjectDef({
     required this.id,

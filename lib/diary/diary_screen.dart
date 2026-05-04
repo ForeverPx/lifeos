@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
-import '../config/token_store.dart';
+import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
+import '../config/token_store.dart';
 import '../settings/settings_screen.dart';
 import 'diary_compose_screen.dart';
 import 'diary_models.dart';
@@ -284,7 +285,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                     ),
                     const SizedBox(height: 4),
                       Text(
-                        'ForeverPx/my-ai-memory · 日记 daily_notes',
+                        '${GitHubRepoPrefs.displayName} · 日记 daily_notes',
                         style: typography.xs.copyWith(
                           color: colors.mutedForeground,
                         ),
@@ -499,7 +500,7 @@ class _TokenHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '日记读取自 ForeverPx/my-ai-memory 仓库中的 daily_notes 目录。'
+                    '日记读取自 ${GitHubRepoPrefs.displayName} 仓库中的 daily_notes 目录。'
                     '请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,

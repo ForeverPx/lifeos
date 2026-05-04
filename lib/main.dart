@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'checkin/checkin_screen.dart';
 import 'collect/collect_screen.dart';
+import 'config/github_repo_prefs.dart';
 import 'config/theme_prefs.dart';
 import 'diary/diary_screen.dart';
 import 'home/home_dashboard.dart';
@@ -13,6 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_CN');
   await ThemePrefs.load();
+  await GitHubRepoPrefs.load();
   runApp(const LifeOSApp());
 }
 

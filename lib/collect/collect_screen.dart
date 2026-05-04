@@ -6,6 +6,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
+import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
 import '../settings/settings_screen.dart';
@@ -268,7 +269,7 @@ class _CollectScreenState extends State<CollectScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'ForeverPx/my-ai-memory · 收藏 collect',
+                        '${GitHubRepoPrefs.displayName} · 收藏 collect',
                         style: typography.xs.copyWith(
                           color: colors.mutedForeground,
                         ),
@@ -884,7 +885,7 @@ class _TokenHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '收藏列表读取自 ForeverPx/my-ai-memory 仓库中的 collect 目录（按日期归档）。'
+                    '收藏列表读取自 ${GitHubRepoPrefs.displayName} 仓库中的 collect 目录（按日期归档）。'
                     '请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,

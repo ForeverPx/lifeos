@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../collect/collect_models.dart';
 import '../collect/collect_parser.dart';
 import '../collect/github_collect_repository.dart';
+import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
 import '../diary/diary_models.dart';
@@ -1005,7 +1006,7 @@ class _TokenHintBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'LifeOS 从 GitHub 私有库 ForeverPx/my-ai-memory 读取首页摘要、日记与收藏。'
+                    'LifeOS 从 GitHub 私有库 ${GitHubRepoPrefs.displayName} 读取首页摘要、日记与收藏。'
                     '请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,

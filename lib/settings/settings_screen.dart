@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../config/github_repo_prefs.dart';
 import '../config/llm_prefs_store.dart';
 import '../config/theme_prefs.dart';
 import '../config/token_store.dart';
@@ -20,6 +21,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _controller = TextEditingController();
+  final _githubOwnerController = TextEditingController();
+  final _githubRepoController = TextEditingController();
   final _llmUrlController = TextEditingController();
   final _llmModelController = TextEditingController();
   final _llmKeyController = TextEditingController();
@@ -41,6 +44,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final token = await TokenStore.readGitHubToken();
+    final githubOwner = await GitHubRepoPrefs.readOwnerForEdit();
+    final githubRepo = await GitHubRepoPrefs.readRepoForEdit();
     final provider = await LlmPrefsStore.readProvider();
     final llmUrl = await LlmPrefsStore.readBaseUrl();
     final llmModel = await LlmPrefsStore.readModel();
@@ -48,6 +53,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     setState(() {
       _controller.text = token;
+      _githubOwnerController.text = githubOwner;
+      _githubRepoController.text = githubRepo;
       _llmProvider = provider;
       _llmUrlController.text = llmUrl;
       _llmModelController.text = llmModel;
@@ -59,6 +66,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _githubOwnerController.dispose();
+    _githubRepoController.dispose();
     _llmUrlController.dispose();
     _llmModelController.dispose();
     _llmKeyController.dispose();
@@ -72,6 +81,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     try {
       await TokenStore.writeGitHubToken(_controller.text);
+      await GitHubRepoPrefs.writeFromUserInput(
+        _githubOwnerController.text,
+        _githubRepoController.text,
+      );
       widget.onGitHubTokenChanged?.call();
       if (mounted) {
         setState(() {
@@ -299,12 +312,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          '数据仓库',
+                          style: typography.lg.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '日记、收藏、打卡等数据读写的 GitHub 仓库（默认 '
+                          '${GitHubRepoPrefs.defaultOwner}/${GitHubRepoPrefs.defaultRepo}）。'
+                          '修改后请一并保存；PAT 需对该仓库有 Contents 与 Metadata 读/写权限。',
+                          style: typography.sm.copyWith(
+                            height: 1.45,
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        FTextField(
+                          control: FTextFieldControl.managed(
+                            controller: _githubOwnerController,
+                          ),
+                          label: const Text('仓库所有者（用户名或组织）'),
+                          hint: GitHubRepoPrefs.defaultOwner,
+                          keyboardType: TextInputType.text,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                        ),
+                        const SizedBox(height: 14),
+                        FTextField(
+                          control: FTextFieldControl.managed(
+                            controller: _githubRepoController,
+                          ),
+                          label: const Text('仓库名'),
+                          hint: GitHubRepoPrefs.defaultRepo,
+                          keyboardType: TextInputType.text,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
                           'Personal Access Token',
                           style: typography.lg.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          '用于访问 GitHub 私有库 ForeverPx/my-ai-memory（日记、收藏、打卡等）。'
+                          '用于访问上述私有库。'
                           '建议使用 fine-grained PAT，仅授予该仓库的 Contents 与 Metadata 读/写所需权限。',
                           style: typography.sm.copyWith(
                             height: 1.45,

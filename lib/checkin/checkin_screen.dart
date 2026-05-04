@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
+import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
 import '../settings/settings_screen.dart';
@@ -251,7 +252,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'ForeverPx/my-ai-memory · 打卡（按周）',
+                        '${GitHubRepoPrefs.displayName} · 打卡（按周）',
                         style: typography.xs.copyWith(
                           color: colors.mutedForeground,
                         ),
@@ -392,7 +393,7 @@ class _TokenHint extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '打卡按周写入 ForeverPx/my-ai-memory 仓库中的 checkins 目录；'
+                    '打卡按周写入 ${GitHubRepoPrefs.displayName} 仓库中的 checkins 目录；'
                     '保存时会同步周统计汇总。请使用具备 repo 权限的 Personal Access Token（PAT），在设置中粘贴保存。',
                     style: typography.sm.copyWith(
                       height: 1.45,

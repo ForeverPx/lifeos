@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import 'checkin_global_stats.dart';
 import 'checkin_models.dart';
@@ -10,8 +11,6 @@ import 'checkin_week.dart';
 class GithubCheckinRepository {
   GithubCheckinRepository({String? token}) : _token = token ?? GitHubToken.value;
 
-  static const owner = 'ForeverPx';
-  static const repo = 'my-ai-memory';
   static const basePrefix = 'checkins';
 
   /// Global rollups for the week calendar (updated after each week save).
@@ -35,8 +34,10 @@ class GithubCheckinRepository {
 
   Uri _contentsUri(String path) {
     final encoded = path.split('/').map(Uri.encodeComponent).join('/');
+    final o = GitHubRepoPrefs.owner;
+    final r = GitHubRepoPrefs.repo;
     return Uri.parse(
-      'https://api.github.com/repos/$owner/$repo/contents/$encoded',
+      'https://api.github.com/repos/$o/$r/contents/$encoded',
     );
   }
 

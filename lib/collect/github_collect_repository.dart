@@ -2,14 +2,13 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import 'collect_cache.dart';
 
 class GithubCollectRepository {
   GithubCollectRepository({String? token}) : _token = token ?? GitHubToken.value;
 
-  static const owner = 'ForeverPx';
-  static const repo = 'my-ai-memory';
   static const basePrefix = 'collect';
 
   String _token;
@@ -34,7 +33,9 @@ class GithubCollectRepository {
 
   Uri _contentsUri(String path) {
     final encoded = path.split('/').map(Uri.encodeComponent).join('/');
-    return Uri.parse('https://api.github.com/repos/$owner/$repo/contents/$encoded');
+    final o = GitHubRepoPrefs.owner;
+    final r = GitHubRepoPrefs.repo;
+    return Uri.parse('https://api.github.com/repos/$o/$r/contents/$encoded');
   }
 
   String _apiMessage(String body) {
