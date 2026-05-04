@@ -1,0 +1,43 @@
+lib/collect/github_collect_repository.dart
+  4620e009cac35af4 5,36-38
+lib/checkin/github_checkin_repository.dart
+  4620e009cac35af4 5,37-38,40
+lib/diary/diary_screen.dart
+  4620e009cac35af4 6,8,288,503
+lib/checkin/checkin_screen.dart
+  4620e009cac35af4 5,255,396
+lib/checkin/checkin_models.dart
+  4620e009cac35af4 1
+lib/home/home_dashboard.dart
+  4620e009cac35af4 10,1009
+lib/main.dart
+  4620e009cac35af4 8,17
+lib/settings/settings_screen.dart
+  4620e009cac35af4 5,24-25,47-48,56-57,69-70,84-87,315-350,357
+lib/collect/collect_screen.dart
+  4620e009cac35af4 9,272,888
+lib/diary/github_diary_repository.dart
+  4620e009cac35af4 5,51-52,54
+lib/config/github_repo_prefs.dart
+  4620e009cac35af4 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.10",
+  "base_commit_sha": "447a65461c7b1c9cf3c10e0658ee42c726cdb850",
+  "prompts": {
+    "4620e009cac35af4": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f6e21aad-fd5a-4990-88b1-f05edaa03674",
+        "model": "default"
+      },
+      "human_author": "panxiao",
+      "messages": [],
+      "total_additions": 137,
+      "total_deletions": 19,
+      "accepted_lines": 137,
+      "overriden_lines": 0
+    }
+  }
+}
