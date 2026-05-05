@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/llm_prefs_store.dart';
+import '../config/openai_message_content.dart';
 
 class LlmCollectFileNamerException implements Exception {
   const LlmCollectFileNamerException(this.message, {this.statusCode, this.body});
@@ -183,7 +184,7 @@ abstract final class LlmCollectFileNamer {
     final payload = jsonEncode({
       'model': model,
       'temperature': 0.3,
-      'max_tokens': 256,
+      'max_tokens': 4096,
       'messages': [
         {'role': 'system', 'content': _systemPrompt},
         {'role': 'user', 'content': userContent},
@@ -204,24 +205,20 @@ abstract final class LlmCollectFileNamer {
         body: res.body,
       );
     }
-    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final map = unwrapOpenAiChatResponseMap(jsonDecode(res.body) as Map<String, dynamic>);
     final choices = map['choices'];
     if (choices is! List || choices.isEmpty) {
       throw const LlmCollectFileNamerException('响应中无 choices');
     }
-    final first = choices.first;
-    if (first is! Map<String, dynamic>) {
-      throw const LlmCollectFileNamerException('choices 格式异常');
+    final text = openAiAssistantTextFromChoice(choices.first);
+    if (text == null || text.isEmpty) {
+      final hint = openAiToolCallsBlockingHint(choices.first);
+      throw LlmCollectFileNamerException(
+        hint ?? '模型未返回文本内容：${briefOpenAiResponseForError(res.body)}',
+        body: res.body,
+      );
     }
-    final msg = first['message'];
-    if (msg is! Map<String, dynamic>) {
-      throw const LlmCollectFileNamerException('message 格式异常');
-    }
-    final content = msg['content'];
-    if (content is! String || content.trim().isEmpty) {
-      throw const LlmCollectFileNamerException('模型未返回文本内容');
-    }
-    return _parseFileNameJson(content);
+    return _parseFileNameJson(text);
   }
 
   static Future<String> _nameAnthropic({

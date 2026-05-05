@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/llm_prefs_store.dart';
+import '../config/openai_message_content.dart';
 
 /// Result of LLM tagging for a diary entry.
 class DiaryTaggingResult {
@@ -147,7 +148,8 @@ abstract final class LlmDiaryTagger {
   }) async {
     final payload = jsonEncode({
       'model': model,
-      'max_tokens': 24,
+      // 推理模型（如 GLM-5）会先把 token 用在 reasoning_content，过小会导致 content 为空且 finish_reason=length
+      'max_tokens': 4096,
       'temperature': 0,
       'messages': [
         {'role': 'user', 'content': '只回复两个大写字母：OK'},
@@ -170,7 +172,7 @@ abstract final class LlmDiaryTagger {
     }
     Map<String, dynamic> map;
     try {
-      map = jsonDecode(res.body) as Map<String, dynamic>;
+      map = unwrapOpenAiChatResponseMap(jsonDecode(res.body) as Map<String, dynamic>);
     } catch (_) {
       throw const LlmDiaryTaggerException('响应不是合法 JSON');
     }
@@ -181,21 +183,13 @@ abstract final class LlmDiaryTagger {
         body: res.body,
       );
     }
-    final first = choices.first;
-    if (first is! Map<String, dynamic>) {
-      throw const LlmDiaryTaggerException('choices[0] 格式异常');
-    }
-    final msg = first['message'];
-    if (msg is! Map<String, dynamic>) {
-      throw const LlmDiaryTaggerException('message 格式异常');
-    }
-    final content = msg['content'];
-    final snippet = switch (content) {
-      final String s => s.trim(),
-      _ => '',
-    };
-    if (snippet.isEmpty) {
-      throw const LlmDiaryTaggerException('模型未返回文本内容');
+    final snippet = openAiAssistantTextFromChoice(choices.first);
+    if (snippet == null || snippet.isEmpty) {
+      final hint = openAiToolCallsBlockingHint(choices.first);
+      throw LlmDiaryTaggerException(
+        hint ?? '模型未返回文本内容：${briefOpenAiResponseForError(res.body)}',
+        body: res.body,
+      );
     }
     final short = snippet.length > 80 ? '${snippet.substring(0, 80)}…' : snippet;
     return '连接成功，已收到回复：$short';
@@ -208,7 +202,7 @@ abstract final class LlmDiaryTagger {
   }) async {
     final payload = jsonEncode({
       'model': model,
-      'max_tokens': 24,
+      'max_tokens': 256,
       'messages': [
         {
           'role': 'user',
@@ -328,6 +322,7 @@ abstract final class LlmDiaryTagger {
     final body = jsonEncode({
       'model': model,
       'temperature': 0.3,
+      'max_tokens': 4096,
       'messages': [
         {'role': 'system', 'content': _systemPrompt},
         {'role': 'user', 'content': userContent},
@@ -348,24 +343,20 @@ abstract final class LlmDiaryTagger {
         body: res.body,
       );
     }
-    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final map = unwrapOpenAiChatResponseMap(jsonDecode(res.body) as Map<String, dynamic>);
     final choices = map['choices'];
     if (choices is! List || choices.isEmpty) {
       throw const LlmDiaryTaggerException('响应中无 choices');
     }
-    final first = choices.first;
-    if (first is! Map<String, dynamic>) {
-      throw const LlmDiaryTaggerException('choices 格式异常');
+    final text = openAiAssistantTextFromChoice(choices.first);
+    if (text == null || text.isEmpty) {
+      final hint = openAiToolCallsBlockingHint(choices.first);
+      throw LlmDiaryTaggerException(
+        hint ?? '模型未返回文本内容：${briefOpenAiResponseForError(res.body)}',
+        body: res.body,
+      );
     }
-    final msg = first['message'];
-    if (msg is! Map<String, dynamic>) {
-      throw const LlmDiaryTaggerException('message 格式异常');
-    }
-    final content = msg['content'];
-    if (content is! String || content.trim().isEmpty) {
-      throw const LlmDiaryTaggerException('模型未返回文本内容');
-    }
-    return _parseTaggingJson(content);
+    return _parseTaggingJson(text);
   }
 
   static Future<DiaryTaggingResult> _tagAnthropic({

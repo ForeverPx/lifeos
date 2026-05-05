@@ -145,11 +145,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context: context,
         variant: FToastVariant.destructive,
         icon: const Icon(FIcons.circleAlert),
-        title: Text(e.message),
+        title: Text(
+          e.message,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+        ),
         description: body != null && body.trim().isNotEmpty
             ? Text(
                 body.length > 320 ? '${body.substring(0, 320)}…' : body,
                 style: typo.xs3.copyWith(height: 1.35),
+                maxLines: 10,
+                overflow: TextOverflow.ellipsis,
               )
             : null,
         duration: const Duration(seconds: 8),
