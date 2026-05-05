@@ -29,7 +29,6 @@ bool _useTouchForuiTheme() {
 FThemeData _lifeosForuiTheme({required bool light}) {
   final touch = _useTouchForuiTheme();
   if (light) {
-    // Blue accent for light mode; dark mode stays neutral gray.
     return touch ? FThemes.blue.light.touch : FThemes.blue.light.desktop;
   }
   return touch ? FThemes.neutral.dark.touch : FThemes.neutral.dark.desktop;
@@ -47,7 +46,12 @@ class LifeOSApp extends StatelessWidget {
         final fDark = _lifeosForuiTheme(light: false);
         return MaterialApp(
           title: 'LifeOS',
-          theme: fLight.toApproximateMaterialTheme(),
+          theme: fLight.toApproximateMaterialTheme().copyWith(
+            scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+            colorScheme: fLight.toApproximateMaterialTheme().colorScheme.copyWith(
+              surface: const Color(0xFFF5F7FA),
+            ),
+          ),
           darkTheme: fDark.toApproximateMaterialTheme(),
           themeMode: pref.themeMode,
           locale: const Locale('zh', 'CN'),
@@ -80,41 +84,24 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  static const _tabs = [
+    _NavItem(icon: Icons.home_rounded, label: '首页'),
+    _NavItem(icon: Icons.calendar_month_rounded, label: '日记'),
+    _NavItem(icon: Icons.bookmark_rounded, label: '收藏'),
+    _NavItem(icon: Icons.fact_check_rounded, label: '打卡'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
-    return FScaffold(
-      scaffoldStyle: FScaffoldStyleDelta.delta(
-        footerDecoration: DecorationDelta.value(const BoxDecoration()),
-      ),
-      childPad: false,
-      footer: FBottomNavigationBar(
-        index: _index,
-        onChange: (i) => setState(() => _index = i),
-        safeAreaBottom: true,
-        style: FBottomNavigationBarStyleDelta.delta(
-          decoration: DecorationDelta.value(BoxDecoration(color: colors.background)),
-        ),
-        children: [
-          FBottomNavigationBarItem(
-            icon: Icon(FIcons.house),
-            label: Text('首页'),
-          ),
-          FBottomNavigationBarItem(
-            icon: Icon(FIcons.bookOpenText),
-            label: Text('日记'),
-          ),
-          FBottomNavigationBarItem(
-            icon: Icon(FIcons.bookmark),
-            label: Text('收藏'),
-          ),
-          FBottomNavigationBarItem(
-            icon: Icon(FIcons.listTodo),
-            label: Text('打卡'),
-          ),
-        ],
-      ),
-      child: IndexedStack(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? colors.background : Colors.white;
+    final selectedColor = colors.primary;
+    final unselectedColor = colors.mutedForeground;
+
+    return Scaffold(
+      backgroundColor: isDark ? colors.background : const Color(0xFFF5F7FA),
+      body: IndexedStack(
         index: _index,
         children: [
           HomeDashboard(onOpenTab: (i) => setState(() => _index = i)),
@@ -123,6 +110,72 @@ class _HomeShellState extends State<HomeShell> {
           const CheckinScreen(),
         ],
       ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(_tabs.length, (i) {
+                final tab = _tabs[i];
+                final selected = _index == i;
+                return GestureDetector(
+                  onTap: () => setState(() => _index = i),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? selectedColor.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.icon,
+                          size: 22,
+                          color: selected ? selectedColor : unselectedColor,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          tab.label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                            color: selected ? selectedColor : unselectedColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final String label;
+  const _NavItem({required this.icon, required this.label});
 }
