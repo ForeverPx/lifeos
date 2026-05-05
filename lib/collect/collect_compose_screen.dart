@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:forui/forui.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../config/llm_prefs_store.dart';
 import 'github_collect_repository.dart';
@@ -26,6 +28,9 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
   final _bodyFocus = FocusNode(debugLabel: 'collect_compose_body');
   bool _busy = false;
   String? _error;
+  String? _busyLabel;
+  final _picker = ImagePicker();
+  final List<XFile> _images = [];
 
   void _unfocus() => FocusManager.instance.primaryFocus?.unfocus();
 
@@ -83,9 +88,94 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImages() async {
+    if (_busy) return;
+    try {
+      final maxToPick = 3 - _images.length;
+      if (maxToPick <= 0) {
+        showFToast(context: context, title: const Text('最多支持 3 张图片'));
+        return;
+      }
+
+      final picked = await _picker.pickMultiImage(imageQuality: null);
+      if (picked.isEmpty) return;
+      if (!mounted) return;
+
+      final next = [..._images, ...picked];
+      if (next.length > 3) {
+        showFToast(context: context, title: const Text('最多支持 3 张图片，已自动截断'));
+      }
+      setState(() {
+        _images
+          ..clear()
+          ..addAll(next.take(3));
+      });
+    } catch (e) {
+      setState(() => _error = '选择图片失败：$e');
+    }
+  }
+
+  Future<List<int>> _compressToJpegBytes(String path) async {
+    final bytes = await FlutterImageCompress.compressWithFile(
+      path,
+      format: CompressFormat.jpeg,
+      quality: 82,
+      minWidth: 1600,
+      minHeight: 1600,
+    );
+    if (bytes == null || bytes.isEmpty) {
+      throw const GithubCollectException('图片压缩失败（空输出）');
+    }
+    return bytes;
+  }
+
+  Widget _buildThumb(XFile img) {
+    return FutureBuilder<List<int>>(
+      future: img.readAsBytes(),
+      builder: (context, snap) {
+        final bytes = snap.data;
+        if (bytes == null || bytes.isEmpty) {
+          return Container(
+            width: 86,
+            height: 86,
+            decoration: BoxDecoration(
+              color: context.theme.colors.secondary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const FCircularProgress(size: FCircularProgressSizeVariant.sm),
+          );
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.memory(
+            Uint8List.fromList(bytes),
+            width: 86,
+            height: 86,
+            fit: BoxFit.cover,
+          ),
+        );
+      },
+    );
+  }
+
+  String _buildMarkdownWithImages({
+    required String body,
+    required List<String> imageUrls,
+  }) {
+    final b = body.replaceAll('\r\n', '\n').trimRight();
+    if (imageUrls.isEmpty) return b;
+    final imgs = imageUrls
+        .where((u) => u.trim().isNotEmpty)
+        .map((u) => '![](${u.trim()})')
+        .join('\n');
+    if (b.trim().isEmpty) return imgs;
+    return '$imgs\n\n$b';
+  }
+
   Future<void> _submit() async {
     final text = _body.text.trim();
-    if (text.isEmpty) {
+    if (text.isEmpty && _images.isEmpty) {
       setState(() => _error = '请先输入正文');
       return;
     }
@@ -97,21 +187,50 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
     _unfocus();
     setState(() {
       _busy = true;
+      _busyLabel = null;
       _error = null;
     });
 
     try {
+      final ts = DateTime.now();
+      final folder = _dayFolderLabel(widget.day);
+
+      final uploadedUrls = <String>[];
+      if (_images.isNotEmpty) {
+        for (var i = 0; i < _images.length; i++) {
+          final f = _images[i];
+          if (!mounted) return;
+          setState(() => _busyLabel = '压缩并上传图片 ${i + 1}/${_images.length}…');
+          final bytes = await _compressToJpegBytes(f.path);
+          final name = '${ts.millisecondsSinceEpoch}_${i + 1}.jpg';
+          final snap = await widget.repo.uploadCollectMediaBytes(
+            fileName: name,
+            bytes: bytes,
+            message: 'lifeos: upload collect image $folder',
+            subdir: folder,
+          );
+          uploadedUrls.add(snap.downloadUrl);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() => _busyLabel = '生成文件名…');
+      final mergedBody = _buildMarkdownWithImages(
+        body: _body.text.replaceAll('\r\n', '\n'),
+        imageUrls: uploadedUrls,
+      );
       final fileName = await LlmCollectFileNamer.suggestMarkdownFileName(
-        _body.text.replaceAll('\r\n', '\n'),
+        mergedBody,
       );
       await widget.repo.createCollectMarkdownFile(
         day: widget.day,
         fileName: fileName,
-        utf8Content: _body.text.replaceAll('\r\n', '\n'),
+        utf8Content: mergedBody,
       );
       if (!mounted) return;
       setState(() => _busy = false);
       _body.clear();
+      _images.clear();
       setState(() {});
       if (!mounted) return;
       showFToast(
@@ -123,18 +242,21 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
+        _busyLabel = null;
         _error = e.message;
       });
     } on GithubCollectException catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
+        _busyLabel = null;
         _error = e.message;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
+        _busyLabel = null;
         _error = e.toString();
       });
     }
@@ -215,30 +337,101 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: FTextField(
-                    control: FTextFieldControl.managed(controller: _body),
-                    focusNode: _bodyFocus,
-                    autofocus: true,
-                    label: const Text('正文'),
-                    hint: '支持多段长文本…',
-                    description: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _body,
-                      builder: (context, value, _) {
-                        final n = value.text.characters.length;
-                        return Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            '$n 字',
-                            style: typography.xs.copyWith(color: colors.mutedForeground),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '图片（最多 3 张）',
+                              style: typography.sm.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colors.foreground,
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    maxLines: null,
-                    expands: true,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
-                    enabled: !_busy,
+                          FButton.icon(
+                            variant: FButtonVariant.ghost,
+                            onPress: _busy ? null : _pickImages,
+                            child: const Icon(FIcons.imagePlus),
+                          ),
+                        ],
+                      ),
+                      if (_images.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 86,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemBuilder: (context, index) {
+                              final img = _images[index];
+                              return Stack(
+                                children: [
+                                  _buildThumb(img),
+                                  Positioned(
+                                    right: 4,
+                                    top: 4,
+                                    child: Material(
+                                      color: Colors.black.withValues(alpha: 0.45),
+                                      borderRadius: BorderRadius.circular(999),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(999),
+                                        onTap: _busy
+                                            ? null
+                                            : () {
+                                                setState(() => _images.removeAt(index));
+                                              },
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                            separatorBuilder: (_, _) => const SizedBox(width: 10),
+                            itemCount: _images.length,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: FTextField(
+                          control: FTextFieldControl.managed(controller: _body),
+                          focusNode: _bodyFocus,
+                          autofocus: true,
+                          label: const Text('正文'),
+                          hint: '支持多段长文本…',
+                          description: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _body,
+                            builder: (context, value, _) {
+                              final n = value.text.characters.length;
+                              return Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  '$n 字',
+                                  style: typography.xs.copyWith(
+                                    color: colors.mutedForeground,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          maxLines: null,
+                          expands: true,
+                          keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.sentences,
+                          enabled: !_busy,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -249,7 +442,9 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
                   prefix: _busy
                       ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
                       : const Icon(FIcons.sparkles),
-                  child: Text(_busy ? '生成文件名并保存中…' : '生成文件名并保存到 GitHub'),
+                  child: Text(
+                    _busy ? (_busyLabel ?? '生成文件名并保存中…') : '生成文件名并保存到 GitHub',
+                  ),
                 ),
               ),
             ],

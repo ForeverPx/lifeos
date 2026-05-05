@@ -853,6 +853,44 @@ class _CollectDetailSheetState extends State<_CollectDetailSheet> {
                     : MarkdownBody(
                         data: widget.item.body,
                         styleSheet: _collectMarkdownSheet(theme, colors, typography),
+                        imageBuilder: (uri, title, alt) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                uri.toString(),
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return Container(
+                                    height: 180,
+                                    alignment: Alignment.center,
+                                    color: colors.secondary,
+                                    child: const FCircularProgress(
+                                      size: FCircularProgressSizeVariant.sm,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: colors.secondary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '图片加载失败：$error',
+                                      style: typography.xs.copyWith(
+                                        color: colors.mutedForeground,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
                       ),
               ),
             ),

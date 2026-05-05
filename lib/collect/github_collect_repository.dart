@@ -10,6 +10,7 @@ class GithubCollectRepository {
   GithubCollectRepository({String? token}) : _token = token ?? GitHubToken.value;
 
   static const basePrefix = 'collect';
+  static const mediaPrefix = '$basePrefix/media';
 
   String _token;
 
@@ -49,6 +50,52 @@ class GithubCollectRepository {
     final raw = body.trim();
     if (raw.isEmpty) return 'unknown';
     return raw.length > 120 ? '${raw.substring(0, 120)}...' : raw;
+  }
+
+  /// Uploads a binary file to `collect/media/...` via GitHub Contents API,
+  /// returns a `download_url` that can be embedded in markdown images.
+  Future<({String path, String downloadUrl})> uploadCollectMediaBytes({
+    required String fileName,
+    required List<int> bytes,
+    required String message,
+    String? subdir,
+  }) async {
+    final safeName = fileName.trim().isEmpty ? 'media.bin' : fileName.trim();
+    final dir = [
+      mediaPrefix,
+      if (subdir != null && subdir.trim().isNotEmpty) subdir.trim(),
+    ].join('/');
+    final path = '$dir/$safeName';
+    final uri = _contentsUri(path);
+
+    final putRes = await http.put(
+      uri,
+      headers: _jsonHeaders,
+      body: jsonEncode({
+        'message': message.trim().isEmpty ? 'lifeos: upload media' : message.trim(),
+        'content': base64Encode(bytes),
+      }),
+    );
+    if (putRes.statusCode != 200 && putRes.statusCode != 201) {
+      throw GithubCollectException(
+        '上传图片失败 (${putRes.statusCode}) · ${_apiMessage(putRes.body)}',
+        statusCode: putRes.statusCode,
+        body: putRes.body,
+      );
+    }
+    final map = jsonDecode(putRes.body) as Map<String, dynamic>;
+    final content = map['content'];
+    if (content is Map<String, dynamic>) {
+      final downloadUrl = content['download_url'] as String?;
+      if (downloadUrl != null && downloadUrl.trim().isNotEmpty) {
+        return (path: path, downloadUrl: downloadUrl.trim());
+      }
+    }
+    final o = GitHubRepoPrefs.owner;
+    final r = GitHubRepoPrefs.repo;
+    final encodedPath = path.split('/').map(Uri.encodeComponent).join('/');
+    final guessed = 'https://raw.githubusercontent.com/$o/$r/main/$encodedPath';
+    return (path: path, downloadUrl: guessed);
   }
 
   Future<List<DateTime>> listDays({int limit = 120}) async {
