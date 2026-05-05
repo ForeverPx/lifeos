@@ -4,13 +4,18 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
+import '../checkin/checkin_models.dart';
+import '../checkin/checkin_week.dart';
+import '../checkin/github_checkin_repository.dart';
 import '../collect/collect_models.dart';
 import '../collect/collect_parser.dart';
+import '../collect/collect_compose_screen.dart';
 import '../collect/github_collect_repository.dart';
 import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
 import '../diary/diary_models.dart';
+import '../diary/diary_compose_screen.dart';
 import '../diary/github_diary_repository.dart';
 import '../settings/settings_screen.dart';
 
@@ -29,6 +34,7 @@ class HomeDashboard extends StatefulWidget {
 class _HomeDashboardState extends State<HomeDashboard> {
   final _diaryRepo = GithubDiaryRepository();
   final _collectRepo = GithubCollectRepository();
+  final _checkinRepo = GithubCheckinRepository();
 
   bool _loadingToken = true;
   bool _loadingSummary = false;
@@ -42,6 +48,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   /// Calendar day of the collect list shown (null if empty).
   DateTime? _collectSummaryDay;
+
+  WeeklyCheckinState? _checkinState;
 
   @override
   void initState() {
@@ -65,6 +73,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       _loadingToken = false;
       _diaryRepo.setToken(token);
       _collectRepo.setToken(token);
+      _checkinRepo.setToken(token);
       if (_diaryRepo.hasToken && !kIsWeb) {
         _loadingSummary = true;
       }
@@ -86,6 +95,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 _collectToday = const [];
                 _diarySummaryDay = null;
                 _collectSummaryDay = null;
+                _checkinState = null;
                 _summaryError = null;
               });
             }
@@ -110,14 +120,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
         allowNotFound: true,
       );
       final collectFuture = _loadCollectForDay(today);
-      final pair = await Future.wait<Object>([
+      final checkinFuture = _loadCheckinState();
+      final results = await Future.wait<dynamic>([
         diaryFuture,
         collectFuture,
+        checkinFuture,
       ]);
       if (!mounted) return;
 
-      var diaryEntries = pair[0] as List<DiaryEntry>;
-      var collectItems = pair[1] as List<CollectItem>;
+      var diaryEntries = results[0] as List<DiaryEntry>;
+      var collectItems = results[1] as List<CollectItem>;
+      _checkinState = results[2] as WeeklyCheckinState?;
+
       DateTime? diaryDay;
       DateTime? collectDay;
 
@@ -178,6 +192,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
         _summaryError = e.toString();
         _loadingSummary = false;
       });
+    }
+  }
+
+  Future<WeeklyCheckinState?> _loadCheckinState() async {
+    if (!_checkinRepo.hasToken || kIsWeb) return null;
+    try {
+      final bounds = CheckinWeekBounds.forLocalDate(_today());
+      final snap = await _checkinRepo.fetchWeek(bounds.weekId);
+      return snap.state;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -255,30 +280,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return '晚上好';
   }
 
-  String _diarySectionLabel(DateTime today) {
-    if (_diaryToday.isEmpty) return '今日日记';
-    if (_diarySummaryDay != null && !_isSameCalendarDay(_diarySummaryDay!, today)) {
-      return '最近日记';
-    }
-    return '今日日记';
-  }
-
-  String? _diarySectionCaption(DateTime today) {
-    if (_diaryToday.isEmpty) return null;
-    if (_diarySummaryDay != null && !_isSameCalendarDay(_diarySummaryDay!, today)) {
-      return '今天暂无记录，以下为 ${DateFormat('y年M月d日', 'zh_CN').format(_diarySummaryDay!)} 最近一条';
-    }
-    return null;
-  }
-
-  String _collectSectionLabel(DateTime today) {
-    if (_collectToday.isEmpty) return '今日收藏';
-    if (_collectSummaryDay != null && !_isSameCalendarDay(_collectSummaryDay!, today)) {
-      return '最近收藏';
-    }
-    return '今日收藏';
-  }
-
   bool _isRecentDiaryNotToday(DateTime today) =>
       _diaryToday.isNotEmpty &&
       _diarySummaryDay != null &&
@@ -313,44 +314,73 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
+  Future<void> _openDiaryComposeToday() async {
+    final today = _today();
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => DiaryComposeScreen(
+          repo: _diaryRepo,
+          year: today.year,
+          month: today.month,
+          day: today.day,
+        ),
+      ),
+    );
+    if (changed == true && mounted) {
+      await _loadSummary();
+    }
+  }
+
+  Future<void> _openCollectComposeToday() async {
+    final today = _today();
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CollectComposeScreen(
+          repo: _collectRepo,
+          day: today,
+        ),
+      ),
+    );
+    if (changed == true && mounted) {
+      await _loadSummary();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (kIsWeb) {
-      return const _DecoratedShell(
-        child: _WebCorsHintBody(),
-      );
+      return const _WebCorsHintBody();
     }
 
     if (_loadingToken) {
-      return const _DecoratedShell(
-        child: Center(child: FCircularProgress()),
-      );
+      return const Center(child: FCircularProgress());
     }
 
     if (!_diaryRepo.hasToken) {
-      return _DecoratedShell(
-        child: _TokenHintBody(onOpenSettings: _openSettings),
-      );
+      return _TokenHintBody(onOpenSettings: _openSettings);
     }
 
     final today = _today();
-    final dateLine = DateFormat('y年M月d日 EEEE', 'zh_CN').format(today);
+    final dateLine = DateFormat('M月d日 EEEE', 'zh_CN').format(today);
 
-    return _DecoratedShell(
-      child: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _loadSummary,
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                    child: Column(
+    return Scaffold(
+      backgroundColor: isDark ? colors.background : const Color(0xFFF5F7FA),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _loadSummary,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
@@ -360,15 +390,36 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'LifeOS',
-                                    style: typography.xl2.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: colors.foreground,
-                                      height: 1.1,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'LifeOS',
+                                        style: typography.xl2.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: colors.foreground,
+                                          height: 1.1,
+                                          fontSize: 28,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: colors.primary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          'v1.0',
+                                          style: typography.sm.copyWith(
+                                            color: colors.primary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Text(
                                     dateLine,
                                     style: typography.sm.copyWith(
@@ -376,42 +427,63 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
+                                  const SizedBox(height: 8),
                                   Text(
                                     _greeting(),
-                                    style: typography.md.copyWith(
+                                    style: typography.lg.copyWith(
                                       color: colors.foreground,
                                       height: 1.35,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 22,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            FButton.icon(
-                              variant: FButtonVariant.ghost,
-                              onPress: _openSettings,
-                              child: Icon(
-                                FIcons.settings,
-                                color: colors.mutedForeground,
+                            GestureDetector(
+                              onTap: _openSettings,
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: isDark ? colors.secondary : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.settings_outlined,
+                                  size: 20,
+                                  color: colors.mutedForeground,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         const _ConnectionChip(),
                         if (_summaryError != null) ...[
                           const SizedBox(height: 12),
                           _ErrorBanner(message: _summaryError!),
                         ],
-                        const SizedBox(height: 20),
-                        _SectionTitle(
-                          icon: FIcons.bookOpenText,
-                          label: _diarySectionLabel(today),
-                          caption: _diarySectionCaption(today),
-                        ),
-                        const SizedBox(height: 10),
-                        _DiaryTodayCard(
-                          entries: _diaryToday,
+                        const SizedBox(height: 24),
+                        // Diary Card
+                        _HomeCard(
+                          icon: Icons.menu_book_rounded,
+                          iconColor: const Color(0xFF2563EB),
+                          iconBgColor: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                          title: '日记',
+                          badgeColor: const Color(0xFF2563EB),
+                          action: _HomeCardAction(
+                            label: '新增',
+                            icon: Icons.add_rounded,
+                            onTap: _openDiaryComposeToday,
+                          ),
                           onTap: () {
                             if (_diaryToday.isEmpty) {
                               widget.onOpenTab(1);
@@ -423,15 +495,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             }
                             widget.onOpenTab(1);
                           },
+                          child: _DiaryCardContent(
+                            entries: _diaryToday,
+                            diaryDay: _diarySummaryDay,
+                            today: today,
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        _SectionTitle(
-                          icon: FIcons.bookmark,
-                          label: _collectSectionLabel(today),
-                        ),
-                        const SizedBox(height: 10),
-                        _CollectTodayCard(
-                          items: _collectToday,
+                        const SizedBox(height: 14),
+                        // Collect Card
+                        _HomeCard(
+                          icon: Icons.bookmark_rounded,
+                          iconColor: const Color(0xFFF59E0B),
+                          iconBgColor: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                          title: '收藏',
+                          badgeColor: const Color(0xFFF59E0B),
+                          action: _HomeCardAction(
+                            label: '新增',
+                            icon: Icons.add_rounded,
+                            onTap: _openCollectComposeToday,
+                          ),
                           onTap: () {
                             if (_collectToday.isEmpty) {
                               widget.onOpenTab(2);
@@ -443,46 +525,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             }
                             widget.onOpenTab(2);
                           },
-                        ),
-                        const SizedBox(height: 28),
-                        Text(
-                          '快速打开',
-                          style: typography.sm.copyWith(
-                            color: colors.mutedForeground,
-                            letterSpacing: 0.2,
+                          child: _CollectCardContent(
+                            items: _collectToday,
+                            collectDay: _collectSummaryDay,
+                            today: today,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FButton(
-                                onPress: () => widget.onOpenTab(1),
-                                prefix: const Icon(FIcons.pencil),
-                                child: const Text('日记'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: FButton(
-                                variant: FButtonVariant.outline,
-                                onPress: () => widget.onOpenTab(2),
-                                prefix: const Icon(FIcons.bookmark),
-                                child: const Text('收藏'),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 14),
+                        // Checkin Card
+                        _HomeCard(
+                          icon: Icons.check_circle_rounded,
+                          iconColor: const Color(0xFF10B981),
+                          iconBgColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          title: '打卡',
+                          badgeColor: const Color(0xFF10B981),
+                          onTap: () => widget.onOpenTab(3),
+                          child: _CheckinCardContent(state: _checkinState),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FButton(
-                            variant: FButtonVariant.ghost,
-                            onPress: _openSettings,
-                            prefix: Icon(FIcons.slidersHorizontal, size: 20, color: colors.primary),
-                            child: Text('设置与缓存', style: TextStyle(color: colors.primary)),
-                          ),
-                        ),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -500,32 +560,438 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _DecoratedShell extends StatelessWidget {
-  const _DecoratedShell({required this.child});
+class _HomeCard extends StatelessWidget {
+  const _HomeCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.title,
+    required this.badgeColor,
+    this.action,
+    required this.onTap,
+    required this.child,
+  });
 
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final String title;
+  final Color badgeColor;
+  final _HomeCardAction? action;
+  final VoidCallback onTap;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.primary.withValues(alpha: 0.12),
-            colors.background,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final typography = context.theme.typography;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? colors.background : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, size: 20, color: iconColor),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colors.foreground,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (action != null) ...[
+                    _HomeCardActionButton(
+                      action: action!,
+                      typography: typography,
+                      colors: colors,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: badgeColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCardAction {
+  const _HomeCardAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+}
+
+class _HomeCardActionButton extends StatelessWidget {
+  const _HomeCardActionButton({
+    required this.action,
+    required this.typography,
+    required this.colors,
+    required this.isDark,
+  });
+
+  final _HomeCardAction action;
+  final FTypography typography;
+  final FColors colors;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: action.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: isDark ? colors.secondary.withValues(alpha: 0.35) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isDark ? colors.border.withValues(alpha: 0.8) : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(action.icon, size: 16, color: colors.mutedForeground),
+            const SizedBox(width: 6),
+            Text(
+              action.label,
+              style: typography.xs.copyWith(
+                color: colors.mutedForeground,
+                fontWeight: FontWeight.w600,
+                height: 1.1,
+              ),
+            ),
           ],
         ),
       ),
-      child: SafeArea(child: child),
+    );
+  }
+}
+
+class _DiaryCardContent extends StatelessWidget {
+  const _DiaryCardContent({
+    required this.entries,
+    required this.diaryDay,
+    required this.today,
+  });
+
+  final List<DiaryEntry> entries;
+  final DateTime? diaryDay;
+  final DateTime today;
+
+  String _subtitle(DiaryEntry e) {
+    final parts = <String>[];
+    if (e.timeLabel != null && e.timeLabel!.isNotEmpty) {
+      parts.add(e.timeLabel!);
+    }
+    final src = e.source.trim();
+    if (src.isNotEmpty) {
+      final oneLine = src.replaceAll(RegExp(r'\s+'), ' ');
+      parts.add(
+        oneLine.length > 48 ? '${oneLine.substring(0, 48)}…' : oneLine,
+      );
+    }
+    return parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+
+    if (entries.isEmpty) {
+      return Text(
+        '今天还没有日记。点按进入「日记」查看日历或补充记录。',
+        style: typography.sm.copyWith(
+          color: colors.mutedForeground,
+          height: 1.45,
+        ),
+      );
+    }
+
+    final entry = entries.first;
+    final isRecent = diaryDay != null &&
+        !(diaryDay!.year == today.year && diaryDay!.month == today.month && diaryDay!.day == today.day);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isRecent && diaryDay != null)
+          Text(
+            DateFormat('M月d日', 'zh_CN').format(diaryDay!),
+            style: typography.sm.copyWith(
+              color: const Color(0xFF2563EB),
+              fontWeight: FontWeight.w600,
+            ),
+          )
+        else
+          Text(
+            DateFormat('M月d日', 'zh_CN').format(today),
+            style: typography.sm.copyWith(
+              color: const Color(0xFF2563EB),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        const SizedBox(height: 6),
+        Text(
+          entry.title.isEmpty ? '未命名' : entry.title,
+          style: typography.sm.copyWith(
+            color: colors.foreground,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (_subtitle(entry).isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            _subtitle(entry),
+            style: typography.xs.copyWith(
+              color: colors.mutedForeground,
+              height: 1.35,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CollectCardContent extends StatelessWidget {
+  const _CollectCardContent({
+    required this.items,
+    required this.collectDay,
+    required this.today,
+  });
+
+  final List<CollectItem> items;
+  final DateTime? collectDay;
+  final DateTime today;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+
+    if (items.isEmpty) {
+      return Text(
+        '今天还没有收藏。将 .md / .txt 等放入 collect/ 下的日期文件夹后，点按进入「收藏」下拉同步。',
+        style: typography.sm.copyWith(
+          color: colors.mutedForeground,
+          height: 1.45,
+        ),
+      );
+    }
+
+    final item = items.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          item.title,
+          style: typography.sm.copyWith(
+            color: colors.foreground,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (item.preview.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            item.preview,
+            style: typography.xs.copyWith(
+              color: colors.mutedForeground,
+              height: 1.4,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '收藏',
+                style: typography.xs2.copyWith(
+                  color: const Color(0xFFF59E0B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              DateFormat('yyyy年MM月dd日', 'zh_CN').format(collectDay ?? today),
+              style: typography.xs2.copyWith(
+                color: colors.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CheckinCardContent extends StatelessWidget {
+  const _CheckinCardContent({required this.state});
+
+  final WeeklyCheckinState? state;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+
+    if (state == null) {
+      return Text(
+        '本周习惯完成情况',
+        style: typography.sm.copyWith(
+          color: colors.mutedForeground,
+        ),
+      );
+    }
+
+    final bounds = CheckinWeekBounds.forLocalDate(DateTime.now());
+    final today = DateTime.now();
+    final todayYmd = CheckinWeekBounds.ymd(today);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '本周习惯完成情况',
+          style: typography.sm.copyWith(
+            color: colors.mutedForeground,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (var i = 0; i < 7; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      ['一', '二', '三', '四', '五', '六', '日'][i],
+                      style: typography.xs2.copyWith(
+                        color: colors.mutedForeground,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _WeekDot(
+                      checked: _anyCheckedOnDay(bounds.days[i]),
+                      isToday: CheckinWeekBounds.ymd(bounds.days[i]) == todayYmd,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  bool _anyCheckedOnDay(DateTime day) {
+    if (state == null) return false;
+    final ymd = CheckinWeekBounds.ymd(day);
+    for (final def in kCheckinProjects) {
+      if (state!.isChecked(def.id, ymd)) return true;
+    }
+    return false;
+  }
+}
+
+class _WeekDot extends StatelessWidget {
+  const _WeekDot({required this.checked, required this.isToday});
+
+  final bool checked;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: checked ? const Color(0xFF10B981) : const Color(0xFFE5E7EB),
+        border: isToday && !checked
+            ? Border.all(color: const Color(0xFF10B981), width: 2)
+            : null,
+      ),
+      child: checked
+          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          : null,
     );
   }
 }
@@ -539,7 +1005,7 @@ class _ConnectionChip extends StatelessWidget {
     final typography = context.theme.typography;
     return Row(
       children: [
-        Icon(FIcons.cloudCheck, size: 18, color: colors.primary),
+        Icon(Icons.cloud_done_rounded, size: 16, color: colors.primary),
         const SizedBox(width: 6),
         Text(
           'GitHub 已连接',
@@ -548,53 +1014,6 @@ class _ConnectionChip extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.icon,
-    required this.label,
-    this.caption,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? caption;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.theme.colors;
-    final typography = context.theme.typography;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 22, color: colors.primary),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: typography.xl.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colors.foreground,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-        if (caption != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            caption!,
-            style: typography.xs.copyWith(
-              color: colors.mutedForeground,
-              height: 1.4,
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -611,149 +1030,6 @@ class _ErrorBanner extends StatelessWidget {
       variant: FAlertVariant.destructive,
       title: Text(message),
       icon: const Icon(FIcons.circleAlert),
-    );
-  }
-}
-
-class _DiaryTodayCard extends StatelessWidget {
-  const _DiaryTodayCard({
-    required this.entries,
-    required this.onTap,
-  });
-
-  final List<DiaryEntry> entries;
-  final VoidCallback onTap;
-
-  String _subtitle(DiaryEntry e) {
-    final parts = <String>[];
-    if (e.timeLabel != null && e.timeLabel!.isNotEmpty) {
-      parts.add(e.timeLabel!);
-    }
-    final src = e.source.trim();
-    if (src.isNotEmpty) {
-      final oneLine = src.replaceAll(RegExp(r'\s+'), ' ');
-      parts.add(
-        oneLine.length > 72 ? '${oneLine.substring(0, 72)}…' : oneLine,
-      );
-    }
-    return parts.join(' · ');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.theme.colors;
-    final typography = context.theme.typography;
-    return FCard.raw(
-      child: FTappable.static(
-        onPress: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-          child: entries.isEmpty
-              ? Text(
-                  '今天还没有日记。点按进入「日记」查看日历或补充记录。',
-                  style: typography.sm.copyWith(
-                    color: colors.mutedForeground,
-                    height: 1.45,
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < entries.length && i < 4; i++) ...[
-                      if (i > 0) const SizedBox(height: 12),
-                      Text(
-                        entries[i].title.isEmpty ? '未命名' : entries[i].title,
-                        style: typography.sm.copyWith(
-                          color: colors.foreground,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (_subtitle(entries[i]).isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          _subtitle(entries[i]),
-                          style: typography.xs.copyWith(
-                            color: colors.mutedForeground,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ],
-                    if (entries.length > 4)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text(
-                          '还有 ${entries.length - 4} 条…',
-                          style: typography.xs2.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CollectTodayCard extends StatelessWidget {
-  const _CollectTodayCard({
-    required this.items,
-    required this.onTap,
-  });
-
-  final List<CollectItem> items;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.theme.colors;
-    final typography = context.theme.typography;
-    final show = items.take(3).toList();
-    return FCard.raw(
-      child: FTappable.static(
-        onPress: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-          child: items.isEmpty
-              ? Text(
-                  '今天还没有收藏。将 .md / .txt 等放入 collect/ 下的日期文件夹后，点按进入「收藏」下拉同步。',
-                  style: typography.sm.copyWith(
-                    color: colors.mutedForeground,
-                    height: 1.45,
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < show.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 14),
-                      Text(
-                        show[i].title,
-                        style: typography.sm.copyWith(
-                          color: colors.foreground,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (show[i].preview.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          show[i].preview,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: typography.xs.copyWith(
-                            color: colors.mutedForeground,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-        ),
-      ),
     );
   }
 }

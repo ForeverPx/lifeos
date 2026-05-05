@@ -27,6 +27,8 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
   bool _busy = false;
   String? _error;
 
+  void _unfocus() => FocusManager.instance.primaryFocus?.unfocus();
+
   static String _dayFolderLabel(DateTime day) {
     final y = day.year.toString().padLeft(4, '0');
     final m = day.month.toString().padLeft(2, '0');
@@ -92,7 +94,7 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
       return;
     }
 
-    FocusManager.instance.primaryFocus?.unfocus();
+    _unfocus();
     setState(() {
       _busy = true;
       _error = null;
@@ -143,6 +145,8 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
     final folder = _dayFolderLabel(widget.day);
+    final bottomInset =
+        MediaQuery.viewInsetsOf(context).bottom + MediaQuery.paddingOf(context).bottom;
 
     if (kIsWeb) {
       return FScaffold(
@@ -186,66 +190,70 @@ class _CollectComposeScreenState extends State<CollectComposeScreen> {
           ],
           title: const Text('新增收藏'),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                'collect/$folder/ · 保存前将调用大模型根据正文生成文件名',
-                style: typography.xs.copyWith(color: colors.mutedForeground),
-              ),
-            ),
-            if (_error != null)
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _unfocus,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: FAlert(
-                  variant: FAlertVariant.destructive,
-                  title: Text(_error!),
-                  icon: const Icon(FIcons.circleAlert),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  'collect/$folder/ · 保存前将调用大模型根据正文生成文件名',
+                  style: typography.xs.copyWith(color: colors.mutedForeground),
                 ),
               ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: FTextField(
-                  control: FTextFieldControl.managed(controller: _body),
-                  focusNode: _bodyFocus,
-                  autofocus: true,
-                  label: const Text('正文'),
-                  hint: '支持多段长文本…',
-                  description: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _body,
-                    builder: (context, value, _) {
-                      final n = value.text.characters.length;
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '$n 字',
-                          style: typography.xs.copyWith(color: colors.mutedForeground),
-                        ),
-                      );
-                    },
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: FAlert(
+                    variant: FAlertVariant.destructive,
+                    title: Text(_error!),
+                    icon: const Icon(FIcons.circleAlert),
                   ),
-                  maxLines: null,
-                  expands: true,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
-                  enabled: !_busy,
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: FTextField(
+                    control: FTextFieldControl.managed(controller: _body),
+                    focusNode: _bodyFocus,
+                    autofocus: true,
+                    label: const Text('正文'),
+                    hint: '支持多段长文本…',
+                    description: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _body,
+                      builder: (context, value, _) {
+                        final n = value.text.characters.length;
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '$n 字',
+                            style: typography.xs.copyWith(color: colors.mutedForeground),
+                          ),
+                        );
+                      },
+                    ),
+                    maxLines: null,
+                    expands: true,
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.sentences,
+                    enabled: !_busy,
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: FButton(
-                onPress: _busy ? null : _submit,
-                prefix: _busy
-                    ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
-                    : const Icon(FIcons.sparkles),
-                child: Text(_busy ? '生成文件名并保存中…' : '生成文件名并保存到 GitHub'),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
+                child: FButton(
+                  onPress: _busy ? null : _submit,
+                  prefix: _busy
+                      ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                      : const Icon(FIcons.sparkles),
+                  child: Text(_busy ? '生成文件名并保存中…' : '生成文件名并保存到 GitHub'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

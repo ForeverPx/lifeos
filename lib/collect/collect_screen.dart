@@ -171,6 +171,7 @@ class _CollectScreenState extends State<CollectScreen> {
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final q = _query.trim().toLowerCase();
 
     if (kIsWeb) {
@@ -206,91 +207,97 @@ class _CollectScreenState extends State<CollectScreen> {
           )
         : null;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.secondary.withValues(alpha: 0.4),
-            colors.primary.withValues(alpha: 0.06),
-            colors.background,
-          ],
-        ),
+    return Scaffold(
+      backgroundColor: isDark ? colors.background : const Color(0xFFF5F7FA),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openCompose,
+        backgroundColor: const Color(0xFFF59E0B),
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: Stack(
           children: [
             RefreshIndicator(
               onRefresh: _refresh,
               child: CustomScrollView(
                 slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '收藏',
-                              style: typography.xl2.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: colors.foreground,
-                                height: 1.1,
-                              ),
-                            ),
-                          ),
-                          FButton.icon(
-                            variant: FButtonVariant.ghost,
-                            onPress: () {
-                              setState(() => _searchExpanded = !_searchExpanded);
-                              if (!_searchExpanded) {
-                                _searchController.clear();
-                                _setQuery('');
-                              }
-                            },
-                            child: Icon(
-                              _searchExpanded ? FIcons.searchX : FIcons.search,
-                              color: colors.mutedForeground,
-                            ),
-                          ),
-                          FButton.icon(
-                            variant: FButtonVariant.ghost,
-                            onPress: _openSettings,
-                            child: Icon(
-                              FIcons.settings,
-                              color: colors.mutedForeground,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${GitHubRepoPrefs.displayName} · 收藏 collect',
-                        style: typography.xs.copyWith(
-                          color: colors.mutedForeground,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (_loading)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
                           children: [
-                            const FCircularProgress(
-                              size: FCircularProgressSizeVariant.sm,
+                            Expanded(
+                              child: Text(
+                                '收藏',
+                                style: typography.xl2.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.foreground,
+                                  height: 1.1,
+                                  fontSize: 28,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() => _searchExpanded = !_searchExpanded);
+                                if (!_searchExpanded) {
+                                  _searchController.clear();
+                                  _setQuery('');
+                                }
+                              },
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: isDark ? colors.secondary : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _searchExpanded ? Icons.close : Icons.search,
+                                  size: 20,
+                                  color: colors.mutedForeground,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 10),
-                            Text(
-                              '同步中…',
-                              style: typography.sm.copyWith(
-                                color: colors.mutedForeground,
+                            GestureDetector(
+                              onTap: _openSettings,
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: isDark ? colors.secondary : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.settings_outlined,
+                                  size: 20,
+                                  color: colors.mutedForeground,
+                                ),
                               ),
                             ),
                           ],
-                        )
-                      else
+                        ),
+                        const SizedBox(height: 6),
                         Text(
                           hasQuery
                               ? '搜索结果：${resultCount ?? 0} 条（仅搜索已加载内容）'
@@ -299,137 +306,161 @@ class _CollectScreenState extends State<CollectScreen> {
                             color: colors.mutedForeground,
                           ),
                         ),
-                    ],
+                        if (_loading) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '同步中…',
+                                style: typography.sm.copyWith(
+                                  color: colors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 180),
-                  crossFadeState:
-                      _searchExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                  firstChild: const SizedBox(height: 0),
-                  secondChild: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    child: FCard.raw(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            FTextField(
-                              control: FTextFieldControl.managed(
-                                controller: _searchController,
-                                onChange: (_) {
-                                  _searchDebounce?.cancel();
-                                  _searchDebounce = Timer(
-                                    const Duration(milliseconds: 180),
-                                    () {
-                                      if (!mounted) return;
-                                      _setQuery(_searchController.text);
-                                    },
-                                  );
-                                },
-                              ),
-                              hint: '搜索标题 / 正文 / 文件名',
-                              textInputAction: TextInputAction.search,
-                              prefixBuilder: (c, style, variants) =>
-                                  FTextField.prefixIconBuilder(
-                                    c,
-                                    style,
-                                    variants,
-                                    const Icon(FIcons.search),
-                                  ),
-                              clearable: (v) => v.text.trim().isNotEmpty,
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: FButton(
-                                variant: FButtonVariant.ghost,
-                                onPress: () {
-                                  setState(() => _searchExpanded = false);
-                                  _searchController.clear();
-                                  _setQuery('');
-                                },
-                                child: const Text('收起'),
-                              ),
+                SliverToBoxAdapter(
+                  child: AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 200),
+                    crossFadeState:
+                        _searchExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                    firstChild: const SizedBox(height: 0),
+                    secondChild: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? colors.background : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (_error != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: FAlert(
-                      variant: FAlertVariant.destructive,
-                      title: Text(_error!),
-                      icon: const Icon(FIcons.circleAlert),
-                    ),
-                  ),
-                ),
-              if (filteredDays.isEmpty && !_loading)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-                    child: Text(
-                      hasQuery ? '没有匹配的收藏内容。' : '还没有找到 collect/ 下的日期文件夹。',
-                      style: typography.sm.copyWith(
-                        color: colors.mutedForeground,
-                      ),
-                    ),
-                  ),
-                ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final day = filteredDays[index];
-                      final items = hasQuery
-                          ? (_itemsByDay[day] ?? const <CollectItem>[])
-                              .where((it) => _matchesQuery(it, q))
-                              .toList()
-                          : (_itemsByDay[day] ?? const <CollectItem>[]);
-                      final isLoaded = _itemsByDay.containsKey(day);
-                      final originalIndex = _days.indexOf(day);
-                      final isPlannedToLoad = originalIndex != -1 && originalIndex < 30;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 18),
-                        child: _DaySection(
-                          day: day,
-                          items: items,
-                          loading: _loading && isPlannedToLoad && !isLoaded,
-                          showNotLoadedHint: !isPlannedToLoad && !isLoaded,
-                          repo: _repo,
-                          onCollectChanged: _refresh,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FTextField(
+                                control: FTextFieldControl.managed(
+                                  controller: _searchController,
+                                  onChange: (_) {
+                                    _searchDebounce?.cancel();
+                                    _searchDebounce = Timer(
+                                      const Duration(milliseconds: 180),
+                                      () {
+                                        if (!mounted) return;
+                                        _setQuery(_searchController.text);
+                                      },
+                                    );
+                                  },
+                                ),
+                                hint: '搜索标题 / 正文 / 文件名',
+                                textInputAction: TextInputAction.search,
+                                prefixBuilder: (c, style, variants) =>
+                                    FTextField.prefixIconBuilder(
+                                      c,
+                                      style,
+                                      variants,
+                                      const Icon(Icons.search),
+                                    ),
+                                clearable: (v) => v.text.trim().isNotEmpty,
+                              ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: FButton(
+                                  variant: FButtonVariant.ghost,
+                                  onPress: () {
+                                    setState(() => _searchExpanded = false);
+                                    _searchController.clear();
+                                    _setQuery('');
+                                  },
+                                  child: const Text('收起'),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                    childCount: filteredDays.length,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-                ],
-              ),
+                if (_error != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: FAlert(
+                        variant: FAlertVariant.destructive,
+                        title: Text(_error!),
+                        icon: const Icon(FIcons.circleAlert),
+                      ),
+                    ),
+                  ),
+                if (filteredDays.isEmpty && !_loading)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                      child: Text(
+                        hasQuery ? '没有匹配的收藏内容。' : '还没有找到 collect/ 下的日期文件夹。',
+                        style: typography.sm.copyWith(
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final day = filteredDays[index];
+                        final items = hasQuery
+                            ? (_itemsByDay[day] ?? const <CollectItem>[])
+                                .where((it) => _matchesQuery(it, q))
+                                .toList()
+                            : (_itemsByDay[day] ?? const <CollectItem>[]);
+                        final isLoaded = _itemsByDay.containsKey(day);
+                        final originalIndex = _days.indexOf(day);
+                        final isPlannedToLoad = originalIndex != -1 && originalIndex < 30;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: _DaySection(
+                            day: day,
+                            items: items,
+                            loading: _loading && isPlannedToLoad && !isLoaded,
+                            showNotLoadedHint: !isPlannedToLoad && !isLoaded,
+                            repo: _repo,
+                            onCollectChanged: _refresh,
+                          ),
+                        );
+                      },
+                      childCount: filteredDays.length,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Positioned(
-              right: 20,
-              bottom: 20,
-              child: FButton(
-                onPress: _openCompose,
-                prefix: const Icon(FIcons.bookmark),
-                child: const Text('新增收藏'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
+    ),
+  );
   }
 
   void _setQuery(String v) {
@@ -477,60 +508,70 @@ class _DaySection extends StatelessWidget {
     final typography = context.theme.typography;
     final label = DateFormat('yyyy年MM月dd日', 'zh_CN').format(day);
 
-    return FCard.raw(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Icon(FIcons.bookmark, size: 20, color: colors.primary),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: typography.xl.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colors.foreground,
-                    height: 1.2,
-                  ),
-                ),
-                const Spacer(),
-                if (loading)
-                  const FCircularProgress(
-                    size: FCircularProgressSizeVariant.sm,
-                  ),
-              ],
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.bookmark_rounded,
+                size: 16,
+                color: const Color(0xFFF59E0B),
+              ),
             ),
-            const SizedBox(height: 12),
-            if (showNotLoadedHint)
-              Text(
-                '为保证速度，仅加载最近 30 天。下拉刷新会重新同步最近内容。',
-                style: typography.xs.copyWith(
-                  color: colors.mutedForeground,
-                  height: 1.35,
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: typography.md.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.foreground,
+              ),
+            ),
+            const Spacer(),
+            if (loading)
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.primary,
                 ),
               ),
-            if (showNotLoadedHint) const SizedBox(height: 10),
-            if (!loading && items.isEmpty)
-              Text(
-                '这一天没有可展示的文本文件（仅识别 .md/.markdown/.txt）。',
-                style: typography.sm.copyWith(
-                  color: colors.mutedForeground,
-                ),
-              ),
-            for (final item in items) ...[
-              _CollectCard(
-                item: item,
-                repo: repo,
-                onCollectChanged: onCollectChanged,
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (items.isNotEmpty) const SizedBox(height: 2),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        if (showNotLoadedHint)
+          Text(
+            '为保证速度，仅加载最近 30 天。下拉刷新会重新同步最近内容。',
+            style: typography.xs.copyWith(
+              color: colors.mutedForeground,
+              height: 1.35,
+            ),
+          ),
+        if (showNotLoadedHint) const SizedBox(height: 10),
+        if (!loading && items.isEmpty)
+          Text(
+            '这一天没有可展示的文本文件（仅识别 .md/.markdown/.txt）。',
+            style: typography.sm.copyWith(
+              color: colors.mutedForeground,
+            ),
+          ),
+        for (final item in items) ...[
+          _CollectCard(
+            item: item,
+            repo: repo,
+            onCollectChanged: onCollectChanged,
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
     );
   }
 }
@@ -550,63 +591,108 @@ class _CollectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
-    return FCard.raw(
-      child: FTappable.static(
-        onPress: () {
-          showFSheet<void>(
-            context: context,
-            side: FLayout.btt,
-            mainAxisMaxRatio: 0.88,
-            builder: (ctx) => ColoredBox(
-              color: FTheme.of(ctx).colors.background,
-              child: _CollectDetailSheet(
-                item: item,
-                repo: repo,
-                onCollectChanged: onCollectChanged,
-              ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () {
+        showFSheet<void>(
+          context: context,
+          side: FLayout.btt,
+          mainAxisMaxRatio: 0.88,
+          builder: (ctx) => ColoredBox(
+            color: FTheme.of(ctx).colors.background,
+            child: _CollectDetailSheet(
+              item: item,
+              repo: repo,
+              onCollectChanged: onCollectChanged,
             ),
-          );
-        },
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? colors.background : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          child: Column(
+          padding: const EdgeInsets.all(14),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                item.title,
-                style: typography.lg.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colors.foreground,
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (item.preview.isNotEmpty)
-                Text(
-                  item.preview,
-                  style: typography.sm.copyWith(
-                    color: colors.mutedForeground,
-                    height: 1.45,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                  child: Icon(
+                    Icons.image_outlined,
+                    size: 28,
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
                   ),
                 ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(FIcons.fileText, size: 16, color: colors.mutedForeground),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      item.fileName,
-                      style: typography.xs.copyWith(
-                        color: colors.mutedForeground,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: typography.md.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.foreground,
+                        height: 1.3,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Icon(FIcons.externalLink, size: 16, color: colors.mutedForeground),
-                ],
+                    if (item.preview.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        item.preview,
+                        style: typography.sm.copyWith(
+                          color: colors.mutedForeground,
+                          height: 1.45,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '收藏',
+                            style: typography.xs2.copyWith(
+                              color: const Color(0xFFF59E0B),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          Icons.open_in_new,
+                          size: 16,
+                          color: colors.mutedForeground,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -907,4 +993,3 @@ class _TokenHint extends StatelessWidget {
     );
   }
 }
-

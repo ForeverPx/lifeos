@@ -32,6 +32,8 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
   bool _busy = false;
   String? _error;
 
+  void _unfocus() => FocusManager.instance.primaryFocus?.unfocus();
+
   @override
   void initState() {
     super.initState();
@@ -90,7 +92,7 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
       return;
     }
 
-    FocusManager.instance.primaryFocus?.unfocus();
+    _unfocus();
     setState(() {
       _busy = true;
       _error = null;
@@ -144,6 +146,8 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final bottomInset =
+        MediaQuery.viewInsetsOf(context).bottom + MediaQuery.paddingOf(context).bottom;
 
     if (kIsWeb) {
       return FScaffold(
@@ -187,66 +191,70 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
           ],
           title: const Text('新增日记'),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                '${widget.year}-${widget.month.toString().padLeft(2, '0')}-${widget.day.toString().padLeft(2, '0')} · 保存前将调用大模型生成标题与标签',
-                style: typography.xs.copyWith(color: colors.mutedForeground),
-              ),
-            ),
-            if (_error != null)
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _unfocus,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: FAlert(
-                  variant: FAlertVariant.destructive,
-                  title: Text(_error!),
-                  icon: const Icon(FIcons.circleAlert),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  '${widget.year}-${widget.month.toString().padLeft(2, '0')}-${widget.day.toString().padLeft(2, '0')} · 保存前将调用大模型生成标题与标签',
+                  style: typography.xs.copyWith(color: colors.mutedForeground),
                 ),
               ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: FTextField(
-                  control: FTextFieldControl.managed(controller: _body),
-                  focusNode: _bodyFocus,
-                  autofocus: true,
-                  label: const Text('正文'),
-                  hint: '支持多段长文本…',
-                  description: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _body,
-                    builder: (context, value, _) {
-                      final n = value.text.characters.length;
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '$n 字',
-                          style: typography.xs.copyWith(color: colors.mutedForeground),
-                        ),
-                      );
-                    },
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: FAlert(
+                    variant: FAlertVariant.destructive,
+                    title: Text(_error!),
+                    icon: const Icon(FIcons.circleAlert),
                   ),
-                  maxLines: null,
-                  expands: true,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
-                  enabled: !_busy,
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: FTextField(
+                    control: FTextFieldControl.managed(controller: _body),
+                    focusNode: _bodyFocus,
+                    autofocus: true,
+                    label: const Text('正文'),
+                    hint: '支持多段长文本…',
+                    description: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _body,
+                      builder: (context, value, _) {
+                        final n = value.text.characters.length;
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '$n 字',
+                            style: typography.xs.copyWith(color: colors.mutedForeground),
+                          ),
+                        );
+                      },
+                    ),
+                    maxLines: null,
+                    expands: true,
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.sentences,
+                    enabled: !_busy,
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: FButton(
-                onPress: _busy ? null : _submit,
-                prefix: _busy
-                    ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
-                    : const Icon(FIcons.sparkles),
-                child: Text(_busy ? '打标签并保存中…' : '打标签并保存到 GitHub'),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
+                child: FButton(
+                  onPress: _busy ? null : _submit,
+                  prefix: _busy
+                      ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                      : const Icon(FIcons.sparkles),
+                  child: Text(_busy ? '打标签并保存中…' : '打标签并保存到 GitHub'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
