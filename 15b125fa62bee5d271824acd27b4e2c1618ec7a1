@@ -1,0 +1,24 @@
+lib/main.dart
+  ab10b5f0451e8868 49-54,87-92,97-104,113-172,176-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.11",
+  "base_commit_sha": "15b125fa62bee5d271824acd27b4e2c1618ec7a1",
+  "prompts": {
+    "ab10b5f0451e8868": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "769bd193-f5ae-45db-a818-34d1866f2ce9",
+        "model": "kimi-k2.6"
+      },
+      "human_author": "panxiao <panxiao@cvte.com>",
+      "messages": [],
+      "total_additions": 87,
+      "total_deletions": 34,
+      "accepted_lines": 87,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/9fe7a87ed8bdbaf4c9d534d4a73074948ebb4680cdd489e0f14f581a0a3a0bd3"
+    }
+  }
+}
