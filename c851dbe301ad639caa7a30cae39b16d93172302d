@@ -1,0 +1,30 @@
+lib/diary/diary_compose_screen.dart
+  652d5a142f25b916 3,5,36-38,89-175,178,190,195-227,229,231,242,254,261,268,348-360,362-442,453-455
+pubspec.yaml
+  652d5a142f25b916 43-45
+lib/diary/diary_screen.dart
+  652d5a142f25b916 3,755,803-859
+lib/diary/github_diary_repository.dart
+  652d5a142f25b916 15,59-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.11",
+  "base_commit_sha": "c851dbe301ad639caa7a30cae39b16d93172302d",
+  "prompts": {
+    "652d5a142f25b916": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c658e061-aa56-42fa-a1ad-f04f05ebb5dc",
+        "model": "default"
+      },
+      "human_author": "panxiao <panxiao@cvte.com>",
+      "messages": [],
+      "total_additions": 354,
+      "total_deletions": 45,
+      "accepted_lines": 343,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/fc1c672afc618e32c79efedf552cfadf7f044973aac0dca5ae026c95e1d259dc"
+    }
+  }
+}
