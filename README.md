@@ -6,7 +6,7 @@
 
 **LifeOS** is a cross-platform personal productivity client built with [Flutter](https://flutter.dev). It connects a GitHub repository as the source of truth for diary entries, saved items, and habit check-ins, with optional OpenAI-compatible LLM endpoints for assisted tagging and naming.
 
-The application shell, navigation, and copy are localized for **Simplified Chinese (`zh_CN`)**.
+<img width="1923" height="818" alt="cover-lifeos-v1" src="https://github.com/user-attachments/assets/7993da90-d09f-4fa6-80b3-00790cdc37db" />
 
 ---
 
