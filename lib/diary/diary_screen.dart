@@ -266,7 +266,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         Expanded(
                           child: Text(
                             '日记',
-                            style: typography.xl2.copyWith(
+                            style: typography.xl.copyWith(
                               fontWeight: FontWeight.w600,
                               color: colors.foreground,
                               height: 1.1,

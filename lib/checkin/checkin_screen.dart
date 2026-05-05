@@ -233,7 +233,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
                           Expanded(
                             child: Text(
                               '打卡',
-                              style: typography.xl2.copyWith(
+                              style: typography.xl.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: colors.foreground,
                                 height: 1.1,

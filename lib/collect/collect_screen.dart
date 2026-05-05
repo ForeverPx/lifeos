@@ -234,11 +234,10 @@ class _CollectScreenState extends State<CollectScreen> {
                             Expanded(
                               child: Text(
                                 '收藏',
-                                style: typography.xl2.copyWith(
+                                style: typography.xl.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: colors.foreground,
                                   height: 1.1,
-                                  fontSize: 28,
                                 ),
                               ),
                             ),
@@ -705,9 +704,9 @@ class _CollectCard extends StatelessWidget {
 MarkdownStyleSheet _collectMarkdownSheet(ThemeData theme, FColors colors, FTypography typography) {
   return MarkdownStyleSheet.fromTheme(theme).copyWith(
     p: typography.sm.copyWith(height: 1.55, color: colors.mutedForeground),
-    h1: typography.xl2.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
-    h2: typography.xl.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
-    h3: typography.lg.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
+    h1: typography.xl.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
+    h2: typography.lg.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
+    h3: typography.md.copyWith(fontWeight: FontWeight.w700, color: colors.foreground, height: 1.2),
     code: typography.sm.copyWith(fontFamily: 'monospace', color: colors.foreground),
     codeblockPadding: const EdgeInsets.all(12),
     codeblockDecoration: BoxDecoration(

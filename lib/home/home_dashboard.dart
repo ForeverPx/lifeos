@@ -394,11 +394,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                     children: [
                                       Text(
                                         'LifeOS',
-                                        style: typography.xl2.copyWith(
+                                        style: typography.xl.copyWith(
                                           fontWeight: FontWeight.w700,
                                           color: colors.foreground,
                                           height: 1.1,
-                                          fontSize: 28,
                                         ),
                                       ),
                                       const SizedBox(width: 6),
@@ -434,7 +433,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                       color: colors.foreground,
                                       height: 1.35,
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 22,
                                     ),
                                   ),
                                 ],
@@ -1040,17 +1038,17 @@ MarkdownStyleSheet _homeMarkdownSheet(ThemeData theme, FColors colors, FTypograp
       height: 1.55,
       color: colors.mutedForeground,
     ),
-    h1: typography.xl2.copyWith(
+    h1: typography.xl.copyWith(
       fontWeight: FontWeight.w700,
       color: colors.foreground,
       height: 1.2,
     ),
-    h2: typography.xl.copyWith(
+    h2: typography.lg.copyWith(
       fontWeight: FontWeight.w700,
       color: colors.foreground,
       height: 1.2,
     ),
-    h3: typography.lg.copyWith(
+    h3: typography.md.copyWith(
       fontWeight: FontWeight.w700,
       color: colors.foreground,
       height: 1.2,
