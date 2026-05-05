@@ -1,0 +1,45 @@
+lib/home/home_dashboard.dart
+  57a26dcb38847e15 12,18,317-348,482-486,512-516,577,587,595,637-645,659-702,704-717
+  ab10b5f0451e8868 7-9,37,52-53,76,98,123-124,127,131-134,198-205,353,356,360,364,368-383,393-420,422,430,433,436-437,443-463,468,474-481,498-502,504-511,528-531,534-543,545,563-564,570-576,578-580,582-586,588,594,596-608,610-636,646-658,703,725-749,755-771,773-787,789,791-795,797-798,800-811,817-821,824-826,832-844,848-856,858,861,866-867,870-895,901-902,904,908-960,963-971,974-975,977-978,980-995,997,999-1000,1006-1015,1017,1022-1023,1025,1029-1032
+lib/diary/diary_compose_screen.dart
+  57a26dcb38847e15 35-36,95,149-150,194-199,201-204,207-242,246-254,256-257
+lib/collect/collect_compose_screen.dart
+  57a26dcb38847e15 30-31,97,148-149,193-198,200-203,206-241,245-253,255-256
+lib/collect/collect_screen.dart
+  ab10b5f0451e8868 174,210-217,219,226-231,234-243,245-272,275-295,299-300,309-319,321-326,328-351,355-398,404-412,415-423,427-454,457,459-460,462-463,511-514,516-527,529-534,536-544,549-574,594-607,609-620,622-623,625-626,629-638,641-652,657-695
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.11",
+  "base_commit_sha": "e07998ea5fa335e1d67d2510ebe28a1263c465e2",
+  "prompts": {
+    "57a26dcb38847e15": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "915c7258-ffb2-4227-85ff-04d2c37b0158",
+        "model": "default"
+      },
+      "human_author": "panxiao <panxiao@cvte.com>",
+      "messages": [],
+      "total_additions": 239,
+      "total_deletions": 133,
+      "accepted_lines": 239,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/3bcba6e161de6abfe77d794a75c253bfd4e2e61c88a2d7f30c8a33944f0c89db"
+    },
+    "ab10b5f0451e8868": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "769bd193-f5ae-45db-a818-34d1866f2ce9",
+        "model": "kimi-k2.6"
+      },
+      "human_author": "panxiao <panxiao@cvte.com>",
+      "messages": [],
+      "total_additions": 912,
+      "total_deletions": 641,
+      "accepted_lines": 826,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/25df9b6e4dd522741e6d86c2ca531763e891a396dfa75daa253be1d82ccca240"
+    }
+  }
+}
