@@ -40,6 +40,9 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_markdown_plus: ^1.0.7
   forui: ^0.21.3
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.4.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

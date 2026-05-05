@@ -12,6 +12,7 @@ class GithubDiaryRepository {
   GithubDiaryRepository({String? token}) : _token = token ?? GitHubToken.value;
 
   static const basePrefix = 'daily_notes';
+  static const mediaPrefix = '$basePrefix/media';
 
   String _token;
 
@@ -53,6 +54,56 @@ class GithubDiaryRepository {
     return Uri.parse(
       'https://api.github.com/repos/$o/$r/contents/$encoded',
     );
+  }
+
+  /// Uploads a binary file to `daily_notes/media/...` via GitHub Contents API,
+  /// returns a `download_url` that can be embedded in markdown images.
+  ///
+  /// The returned url is typically like:
+  /// `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>`
+  Future<({String path, String downloadUrl})> uploadDiaryMediaBytes({
+    required String fileName,
+    required List<int> bytes,
+    required String message,
+    String? subdir,
+  }) async {
+    final safeName = fileName.trim().isEmpty ? 'media.bin' : fileName.trim();
+    final dir = [
+      mediaPrefix,
+      if (subdir != null && subdir.trim().isNotEmpty) subdir.trim(),
+    ].join('/');
+    final path = '$dir/$safeName';
+    final uri = _contentsUri(path);
+
+    final putRes = await http.put(
+      uri,
+      headers: _jsonHeaders,
+      body: jsonEncode({
+        'message': message.trim().isEmpty ? 'lifeos: upload media' : message.trim(),
+        'content': base64Encode(bytes),
+      }),
+    );
+    if (putRes.statusCode != 200 && putRes.statusCode != 201) {
+      throw GithubDiaryException(
+        '上传图片失败 (${putRes.statusCode}) · ${_apiMessage(putRes.body)}',
+        statusCode: putRes.statusCode,
+        body: putRes.body,
+      );
+    }
+    final map = jsonDecode(putRes.body) as Map<String, dynamic>;
+    final content = map['content'];
+    if (content is Map<String, dynamic>) {
+      final downloadUrl = content['download_url'] as String?;
+      if (downloadUrl != null && downloadUrl.trim().isNotEmpty) {
+        return (path: path, downloadUrl: downloadUrl.trim());
+      }
+    }
+    // Fallback: construct a raw URL with a best-effort branch guess.
+    final o = GitHubRepoPrefs.owner;
+    final r = GitHubRepoPrefs.repo;
+    final encodedPath = path.split('/').map(Uri.encodeComponent).join('/');
+    final guessed = 'https://raw.githubusercontent.com/$o/$r/main/$encodedPath';
+    return (path: path, downloadUrl: guessed);
   }
 
   /// Returns which days in [year]-[month] have a `.md` file (1–31).

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
@@ -751,6 +752,7 @@ class _EntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final theme = Theme.of(context);
     return FCard.raw(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -798,12 +800,63 @@ class _EntryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            SelectableText(
-              entry.source,
-              style: typography.sm.copyWith(
-                height: 1.5,
-                color: colors.mutedForeground,
-              ),
+            SelectionArea(
+              child: entry.source.trim().isEmpty
+                  ? Text(
+                      '（内容为空）',
+                      style: typography.sm.copyWith(
+                        height: 1.55,
+                        color: colors.mutedForeground,
+                      ),
+                    )
+                  : MarkdownBody(
+                      data: entry.source,
+                      styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                        p: typography.sm.copyWith(
+                          height: 1.55,
+                          color: colors.mutedForeground,
+                        ),
+                        a: typography.sm.copyWith(color: colors.primary),
+                      ),
+                      imageBuilder: (uri, title, alt) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              uri.toString(),
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  height: 180,
+                                  alignment: Alignment.center,
+                                  color: colors.secondary,
+                                  child: const FCircularProgress(
+                                    size: FCircularProgressSizeVariant.sm,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: colors.secondary,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '图片加载失败：$error',
+                                    style: typography.xs.copyWith(
+                                      color: colors.mutedForeground,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
             if (entry.tags.isNotEmpty) ...[
               const SizedBox(height: 12),
