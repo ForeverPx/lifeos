@@ -143,6 +143,7 @@ class _CollectScreenState extends State<CollectScreen> {
               title: title,
               body: body,
               preview: previewFromBody(body),
+              tags: tagsFromCollectBody(body),
             ),
           );
         }
@@ -706,7 +707,23 @@ class _CollectCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: item.tags.isEmpty
+                              ? const SizedBox.shrink()
+                              : Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: [
+                                    for (final t in item.tags)
+                                      FBadge(
+                                        variant: FBadgeVariant.secondary,
+                                        child: Text(t, style: typography.xs2),
+                                      ),
+                                  ],
+                                ),
+                        ),
+                        const SizedBox(width: 8),
                         Icon(
                           Icons.open_in_new,
                           size: 16,

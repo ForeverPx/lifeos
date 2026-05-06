@@ -23,6 +23,24 @@ String previewFromBody(String body, {int maxLen = 160}) {
   return '${t.substring(0, maxLen)}…';
 }
 
+final _collectTagToken = RegExp(r'#[^\s#]+');
+
+/// Extracts `#tag` tokens from [body], de-duplicated and in order.
+List<String> tagsFromCollectBody(String body, {int maxTags = 12}) {
+  final text = body.replaceAll('\r\n', '\n');
+  final seen = <String>{};
+  final out = <String>[];
+  for (final m in _collectTagToken.allMatches(text)) {
+    final t = (m.group(0) ?? '').trim();
+    if (t.isEmpty) continue;
+    if (seen.add(t)) {
+      out.add(t);
+      if (out.length >= maxTags) break;
+    }
+  }
+  return out;
+}
+
 final _markdownImageToken = RegExp(r'!\[[^\]]*\]\(([^)\s]+)');
 
 /// Returns the first inline markdown image url in [body], like:

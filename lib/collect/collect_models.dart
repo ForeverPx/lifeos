@@ -9,6 +9,7 @@ class CollectItem {
     required this.title,
     required this.body,
     required this.preview,
+    required this.tags,
   });
 
   /// Day folder name, e.g. 2026-04-30
@@ -23,5 +24,8 @@ class CollectItem {
 
   /// A short preview generated from [body].
   final String preview;
+
+  /// Parsed from markdown body, like `#flutter #ai`.
+  final List<String> tags;
 }
 

@@ -260,6 +260,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           title: title,
           body: body,
           preview: previewFromBody(body, maxLen: 120),
+          tags: tagsFromCollectBody(body),
         ),
       );
     }
