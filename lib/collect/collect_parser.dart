@@ -23,6 +23,24 @@ String previewFromBody(String body, {int maxLen = 160}) {
   return '${t.substring(0, maxLen)}…';
 }
 
+final _markdownImageToken = RegExp(r'!\[[^\]]*\]\(([^)\s]+)');
+
+/// Returns the first inline markdown image url in [body], like:
+/// `![](https://example.com/a.png)`.
+///
+/// If none exists, returns null.
+String? firstMarkdownImageUrl(String body) {
+  final m = _markdownImageToken.firstMatch(body);
+  if (m == null) return null;
+  final raw = (m.group(1) ?? '').trim();
+  if (raw.isEmpty) return null;
+  // Markdown allows wrapping url with <...>.
+  final v = raw.startsWith('<') && raw.endsWith('>')
+      ? raw.substring(1, raw.length - 1).trim()
+      : raw;
+  return v.isEmpty ? null : v;
+}
+
 String normalizeBody(String content) {
   final t = content.replaceAll('\r\n', '\n').trim();
   return t;

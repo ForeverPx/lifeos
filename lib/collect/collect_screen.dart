@@ -591,6 +591,7 @@ class _CollectCard extends StatelessWidget {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final thumbUrl = firstMarkdownImageUrl(item.body);
 
     return GestureDetector(
       onTap: () {
@@ -625,20 +626,43 @@ class _CollectCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 28,
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+              if (thumbUrl != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    thumbUrl,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        width: 72,
+                        height: 72,
+                        alignment: Alignment.center,
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                        child: const FCircularProgress(
+                          size: FCircularProgressSizeVariant.sm,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 72,
+                        height: 72,
+                        alignment: Alignment.center,
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          size: 22,
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
+                const SizedBox(width: 14),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
