@@ -239,10 +239,23 @@ class _CheckinScreenState extends State<CheckinScreen> {
     }
   }
 
+  Future<void> _openWeekDetail(CheckinWeekBounds bounds) async {
+    showFSheet<void>(
+      context: context,
+      side: FLayout.btt,
+      mainAxisMaxRatio: 0.9,
+      builder: (ctx) => ColoredBox(
+        color: FTheme.of(ctx).colors.background,
+        child: _WeekDetailSheet(repo: _repo, bounds: bounds),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (kIsWeb) {
       return const _WebHint();
@@ -259,19 +272,9 @@ class _CheckinScreenState extends State<CheckinScreen> {
     final today = _today();
     final bounds = CheckinWeekBounds.forLocalDate(today);
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.secondary.withValues(alpha: 0.45),
-            colors.primary.withValues(alpha: 0.08),
-            colors.background,
-          ],
-        ),
-      ),
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: isDark ? colors.background : const Color(0xFFF5F7FA),
+      body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshWeek,
           child: CustomScrollView(
@@ -289,33 +292,56 @@ class _CheckinScreenState extends State<CheckinScreen> {
                             child: Text(
                               '打卡',
                               style: typography.xl.copyWith(
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 color: colors.foreground,
                                 height: 1.1,
                               ),
                             ),
                           ),
-                          FButton.icon(
-                            variant: FButtonVariant.ghost,
-                            onPress: _openSettings,
-                            child: Icon(
-                              FIcons.settings,
-                              color: colors.mutedForeground,
+                          GestureDetector(
+                            onTap: _openSettings,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isDark ? colors.secondary : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: isDark ? 0.2 : 0.04,
+                                    ),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.settings_outlined,
+                                size: 20,
+                                color: colors.mutedForeground,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${GitHubRepoPrefs.displayName} · 打卡（按周）',
+                        '${GitHubRepoPrefs.displayName} · 按周打卡',
                         style: typography.xs.copyWith(
                           color: colors.mutedForeground,
                         ),
                       ),
                       if (_statsError != null) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
+                        FAlert(
+                          variant: FAlertVariant.destructive,
+                          title: const Text('统计汇总加载失败'),
+                          icon: const Icon(FIcons.circleAlert),
+                        ),
+                        const SizedBox(height: 6),
                         Text(
-                          '统计汇总加载失败：$_statsError',
+                          _statsError!,
                           style: typography.xs.copyWith(
                             color: colors.error,
                             height: 1.35,
@@ -323,30 +349,34 @@ class _CheckinScreenState extends State<CheckinScreen> {
                         ),
                       ],
                       if (_loadError != null) ...[
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         FAlert(
                           variant: FAlertVariant.destructive,
                           title: Text(_loadError!),
                           icon: const Icon(FIcons.circleAlert),
                         ),
                       ],
-                      const SizedBox(height: 20),
-                      CheckinWeekPanel(
-                        bounds: bounds,
-                        state: _state ??
-                            WeeklyCheckinState.empty(bounds.weekId),
-                        loading: _loadingWeek && _state == null,
-                        saving: _saving,
-                        showHeading: false,
-                        onToggle: _toggle,
+                      const SizedBox(height: 16),
+                      _SectionCard(
+                        child: CheckinWeekPanel(
+                          bounds: bounds,
+                          state: _state ?? WeeklyCheckinState.empty(bounds.weekId),
+                          loading: _loadingWeek && _state == null,
+                          saving: _saving,
+                          showHeading: true,
+                          onToggle: _toggle,
+                        ),
                       ),
-                      const SizedBox(height: 28),
-                      CheckinRecentWeeksCalendar(
-                        weeks: CheckinWeekBounds.lastNWeeksNewestFirst(today, 12),
-                        statsByWeekId: _globalStats.weeks,
-                        currentWeekId: bounds.weekId,
-                        currentWeekLiveState: _state,
-                        loading: _loadingWeek,
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        child: CheckinRecentWeeksCalendar(
+                          weeks: CheckinWeekBounds.lastNWeeksNewestFirst(today, 12),
+                          statsByWeekId: _globalStats.weeks,
+                          currentWeekId: bounds.weekId,
+                          currentWeekLiveState: _state,
+                          loading: _loadingWeek,
+                          onOpenWeek: _openWeekDetail,
+                        ),
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -355,6 +385,137 @@ class _CheckinScreenState extends State<CheckinScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? colors.background : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _WeekDetailSheet extends StatefulWidget {
+  const _WeekDetailSheet({required this.repo, required this.bounds});
+
+  final GithubCheckinRepository repo;
+  final CheckinWeekBounds bounds;
+
+  @override
+  State<_WeekDetailSheet> createState() => _WeekDetailSheetState();
+}
+
+class _WeekDetailSheetState extends State<_WeekDetailSheet> {
+  bool _loading = true;
+  WeeklyCheckinState? _state;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final snap = await widget.repo.fetchWeek(widget.bounds.weekId);
+      if (!mounted) return;
+      setState(() {
+        _state = snap.state;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final typography = context.theme.typography;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '周详情',
+                    style: typography.lg.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.foreground,
+                    ),
+                  ),
+                ),
+                FButton.icon(
+                  variant: FButtonVariant.ghost,
+                  onPress: () => Navigator.of(context).pop(),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (_error != null) ...[
+              FAlert(
+                variant: FAlertVariant.destructive,
+                title: Text('加载失败：$_error'),
+                icon: const Icon(FIcons.circleAlert),
+              ),
+              const SizedBox(height: 12),
+              FButton(
+                onPress: _load,
+                prefix: const Icon(FIcons.rotateCw),
+                child: const Text('重试'),
+              ),
+            ] else ...[
+              CheckinWeekPanel(
+                bounds: widget.bounds,
+                state: _state ?? WeeklyCheckinState.empty(widget.bounds.weekId),
+                loading: _loading,
+                saving: false,
+                showHeading: true,
+                onToggle: (projectId, ymd) {},
+              ),
+            ],
+          ],
         ),
       ),
     );

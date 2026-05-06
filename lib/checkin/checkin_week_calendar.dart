@@ -13,6 +13,7 @@ class CheckinRecentWeeksCalendar extends StatelessWidget {
     required this.statsByWeekId,
     required this.currentWeekId,
     required this.currentWeekLiveState,
+    this.onOpenWeek,
     this.loading = false,
   });
 
@@ -24,6 +25,9 @@ class CheckinRecentWeeksCalendar extends StatelessWidget {
 
   final String currentWeekId;
   final WeeklyCheckinState? currentWeekLiveState;
+
+  /// Tap a week row to open its details.
+  final void Function(CheckinWeekBounds bounds)? onOpenWeek;
 
   final bool loading;
 
@@ -64,14 +68,19 @@ class CheckinRecentWeeksCalendar extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '每行一周：上方为周标识与总体达标情况，下方列出各打卡项的进度与是否达标。',
+          '每行一周。点按可打开该周详情。',
           style: typography.xs.copyWith(
             color: colors.mutedForeground,
             height: 1.35,
           ),
         ),
         const SizedBox(height: 14),
-        for (final b in weeks) _WeekRow(bounds: b, rollup: _rollupFor(b)),
+        for (final b in weeks)
+          _WeekRow(
+            bounds: b,
+            rollup: _rollupFor(b),
+            onTap: onOpenWeek == null ? null : () => onOpenWeek!(b),
+          ),
       ],
     );
   }
@@ -81,10 +90,12 @@ class _WeekRow extends StatelessWidget {
   const _WeekRow({
     required this.bounds,
     required this.rollup,
+    this.onTap,
   });
 
   final CheckinWeekBounds bounds;
   final CheckinWeekRollup? rollup;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -99,73 +110,85 @@ class _WeekRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
         color: colors.secondary.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    bounds.weekId,
-                    style: typography.sm.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colors.foreground,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  if (!hasData)
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                     Text(
-                      '暂无统计',
-                      style: typography.xs.copyWith(
-                        color: colors.mutedForeground,
+                      bounds.weekId,
+                      style: typography.sm.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.foreground,
+                        letterSpacing: 0.2,
                       ),
-                    )
-                  else if (allMet)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(FIcons.badgeCheck, size: 20, color: colors.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          '本周全达成',
+                    ),
+                    const SizedBox(width: 10),
+                    if (!hasData)
+                      Text(
+                        onTap == null ? '暂无统计' : '暂无统计 · 点按查看',
+                        style: typography.xs.copyWith(
+                          color: colors.mutedForeground,
+                        ),
+                      )
+                    else if (allMet)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(FIcons.badgeCheck, size: 20, color: colors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '本周全达成',
+                            style: typography.xs.copyWith(
+                              color: colors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: colors.muted.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$met / $total 项达标',
                           style: typography.xs.copyWith(
-                            color: colors.primary,
-                            fontWeight: FontWeight.w700,
+                            color: colors.foreground,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ],
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colors.muted.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
-                        '$met / $total 项达标',
-                        style: typography.xs.copyWith(
-                          color: colors.foreground,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    const Spacer(),
+                    if (onTap != null)
+                      Icon(
+                        FIcons.chevronRight,
+                        size: 18,
+                        color: colors.mutedForeground,
                       ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              for (var i = 0; i < kCheckinProjects.length; i++) ...[
-                if (i > 0) const SizedBox(height: 6),
-                _HabitLine(
-                  def: kCheckinProjects[i],
-                  rollup: rollup,
-                  hasWeekData: hasData,
+                  ],
                 ),
+                const SizedBox(height: 10),
+                for (var i = 0; i < kCheckinProjects.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 6),
+                  _HabitLine(
+                    def: kCheckinProjects[i],
+                    rollup: rollup,
+                    hasWeekData: hasData,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
