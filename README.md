@@ -1,5 +1,7 @@
 # LifeOS
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 [![Flutter](https://img.shields.io/badge/Flutter-stable-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-%5E3.11-0175C2?logo=dart)](https://dart.dev)
 [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey)]()
@@ -14,6 +16,7 @@
 
 - [Features](#features)
 - [Architecture](#architecture)
+- [Data repository layout](#data-repository-layout)
 - [Requirements](#requirements)
 - [Getting started](#getting-started)
 - [Configuration](#configuration)
@@ -46,6 +49,31 @@ Storage and secrets use platform-appropriate secure storage where applicable (`f
 - **Content:** `flutter_markdown_plus` for rendered markdown; `intl` for date formatting.
 
 High-level flow: the app reads/writes structured content in a configured GitHub repository; LLM calls are optional and user-configured (base URL, model, key).
+
+---
+
+## Data repository layout
+
+LifeOS reads/writes content in the configured GitHub repository using the GitHub **Contents API**. The app expects (and will create on demand) the following paths:
+
+### Diary
+
+- Markdown entries: `daily_notes/<YYYY>/<MM>/<DD>.md`
+  - Also supports reading existing files named `D.md`, `DD.md`, `YYYY-MM-DD.md`, and `DD-*.md` / `DD_*.md` under the same month folder.
+- Media (images): `daily_notes/media/<optional-subdir>/<filename>`
+
+### Collect
+
+- Daily folders: `collect/<YYYY-MM-DD>/`
+- Text files: `collect/<YYYY-MM-DD>/*.md` (also allows `.markdown` / `.txt`)
+- Media (images): `collect/media/<optional-subdir>/<filename>`
+
+### Check-in
+
+- Weekly check-ins: `checkins/<weekId>/checkin.json`
+- Aggregated calendar stats: `checkins/_global_checkin_stats.json`
+
+If you use a fresh empty repository, you can start without pre-creating any folders: the app will create files/folders when saving.
 
 ---
 
@@ -83,8 +111,9 @@ flutter test
 All sensitive values are entered in-app under **Settings** (not committed to the repository).
 
 1. **GitHub**  
-   - Create a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with repository access for the target repo.  
+   - Create a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with access to the target repo.  
    - Set **owner** and **repository** name to match where diary, collect, and check-in data should live.
+   - Recommended: **fine-grained PAT** scoped to a single repository with **Contents** and **Metadata** read/write.
 
 2. **LLM (optional)**  
    - Choose an OpenAI-compatible provider.  
