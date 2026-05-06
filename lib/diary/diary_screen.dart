@@ -58,9 +58,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
   Future<void> _openSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SettingsScreen(
-          onGitHubTokenChanged: _loadTokenAndRefresh,
-        ),
+        builder: (_) =>
+            SettingsScreen(onGitHubTokenChanged: _loadTokenAndRefresh),
       ),
     );
     await _loadTokenAndRefresh();
@@ -187,7 +186,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
         _selectedDay!,
         assumeExists: _daysWithEntries.contains(_selectedDay!),
         allowNotFound:
-            _daysWithEntries.isNotEmpty && !_daysWithEntries.contains(_selectedDay!),
+            _daysWithEntries.isNotEmpty &&
+            !_daysWithEntries.contains(_selectedDay!),
       );
       if (!mounted) return;
       setState(() {
@@ -222,10 +222,21 @@ class _DiaryScreenState extends State<DiaryScreen> {
     _loadMonth();
   }
 
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 5) return '夜深了，注意休息';
+    if (h < 12) return '早上好';
+    if (h < 14) return '中午好';
+    if (h < 18) return '下午好';
+    return '晚上好';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const diaryAccent = Color(0xFF2563EB);
 
     if (kIsWeb) {
       return const _WebCorsHint();
@@ -239,177 +250,240 @@ class _DiaryScreenState extends State<DiaryScreen> {
       return _TokenHint(onOpenSettings: _openSettings);
     }
 
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colors.secondary.withValues(alpha: 0.45),
-                colors.primary.withValues(alpha: 0.08),
-                colors.background,
-              ],
+    final today = DateTime.now();
+    final dateLine = DateFormat('M月d日 EEEE', 'zh_CN').format(today);
+
+    return Scaffold(
+      backgroundColor: isDark ? colors.background : const Color(0xFFF5F7FA),
+      floatingActionButton: _selectedDay == null
+          ? null
+          : FloatingActionButton(
+              onPressed: _openCompose,
+              backgroundColor: diaryAccent,
+              elevation: 4,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, color: Colors.white),
             ),
-          ),
-          child: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '日记',
-                            style: typography.xl.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colors.foreground,
-                              height: 1.1,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await _loadMonth();
+            await _loadSelectedDay();
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'LifeOS',
+                                      style: typography.xl.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: colors.foreground,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        'v1.0',
+                                        style: typography.sm.copyWith(
+                                          color: colors.primary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '$dateLine · ${GitHubRepoPrefs.displayName} · daily_notes',
+                                  style: typography.sm.copyWith(
+                                    color: colors.mutedForeground,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _greeting(),
+                                  style: typography.lg.copyWith(
+                                    color: colors.foreground,
+                                    height: 1.35,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        FButton.icon(
-                          variant: FButtonVariant.ghost,
-                          onPress: _openSettings,
-                          child: Icon(
-                            FIcons.settings,
-                            color: colors.mutedForeground,
+                          GestureDetector(
+                            onTap: _openSettings,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color:
+                                    isDark ? colors.secondary : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: isDark ? 0.2 : 0.04,
+                                    ),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.settings_outlined,
+                                size: 20,
+                                color: colors.mutedForeground,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                      Text(
-                        '${GitHubRepoPrefs.displayName} · 日记 daily_notes',
-                        style: typography.xs.copyWith(
-                          color: colors.mutedForeground,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _MonthHeader(
-                  visibleMonth: _visibleMonth,
-                  onPrev: () => _shiftMonth(-1),
-                  onNext: () => _shiftMonth(1),
-                  loading: _loadingMonth,
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: _CalendarCard(
-                  visibleMonth: _visibleMonth,
-                  daysWithEntries: _daysWithEntries,
-                  selectedDay: _selectedDay,
-                  onSelectDay: (day) {
-                    setState(() => _selectedDay = day);
-                    _loadSelectedDay();
-                  },
-                ),
-              ),
-            ),
-            if (_error != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: FAlert(
-                    variant: FAlertVariant.destructive,
-                    title: Text(_error!),
-                    icon: const Icon(FIcons.circleAlert),
-                  ),
-                ),
-              ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Row(
-                  children: [
-                    Icon(FIcons.bookOpenText, size: 22, color: colors.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      _dayLabel(),
-                      style: typography.xl.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colors.foreground,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (_loadingDay) ...[
-                      const SizedBox(width: 12),
-                      const FCircularProgress(
-                        size: FCircularProgressSizeVariant.sm,
+                        ],
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            if (_entries.isEmpty && !_loadingDay && _selectedDay != null)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    '这一天还没有记录，或文件为空。',
-                    style: typography.sm.copyWith(
-                      color: colors.mutedForeground,
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _MonthHeader(
+                    visibleMonth: _visibleMonth,
+                    onPrev: () => _shiftMonth(-1),
+                    onNext: () => _shiftMonth(1),
+                    loading: _loadingMonth,
                   ),
                 ),
               ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _EntryCard(
-                            entry: _entries[index],
-                            onDelete: () => _deleteEntry(_entries[index]),
-                          ),
-                        );
-                      },
-                      childCount: _entries.length,
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: _CalendarCard(
+                    visibleMonth: _visibleMonth,
+                    daysWithEntries: _daysWithEntries,
+                    selectedDay: _selectedDay,
+                    onSelectDay: (day) {
+                      setState(() => _selectedDay = day);
+                      _loadSelectedDay();
+                    },
+                  ),
+                ),
+              ),
+              if (_error != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FAlert(
+                      variant: FAlertVariant.destructive,
+                      title: Text(_error!),
+                      icon: const Icon(FIcons.circleAlert),
                     ),
                   ),
                 ),
-              ],
-            ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: diaryAccent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.menu_book_rounded,
+                          size: 16,
+                          color: diaryAccent,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _dayLabel(),
+                          style: typography.md.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colors.foreground,
+                          ),
+                        ),
+                      ),
+                      if (_loadingDay)
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.primary,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_entries.isEmpty && !_loadingDay && _selectedDay != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      '这一天还没有记录，或文件为空。',
+                      style: typography.sm.copyWith(
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _EntryCard(
+                        entry: _entries[index],
+                        onDelete: () => _deleteEntry(_entries[index]),
+                      ),
+                    );
+                  }, childCount: _entries.length),
+                ),
+              ),
+            ],
           ),
         ),
-        if (_selectedDay != null)
-          Positioned(
-            right: 20,
-            bottom: 20,
-            child: FButton(
-              onPress: _openCompose,
-              prefix: const Icon(FIcons.pencil),
-              child: const Text('新增日记'),
-            ),
-          ),
-      ],
+      ),
     );
   }
 
   String _dayLabel() {
     if (_selectedDay == null) return '选择日期';
-    final d = DateTime(
-      _visibleMonth.year,
-      _visibleMonth.month,
-      _selectedDay!,
-    );
+    final d = DateTime(_visibleMonth.year, _visibleMonth.month, _selectedDay!);
     return DateFormat('yyyy年MM月dd日 EEEE', 'zh_CN').format(d);
   }
 }
@@ -426,7 +500,7 @@ class _WebCorsHint extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: FCard.raw(
+          child: _DiarySurfaceCard(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -479,7 +553,7 @@ class _TokenHint extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: FCard.raw(
+          child: _DiarySurfaceCard(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -509,10 +583,36 @@ class _TokenHint extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  FButton(
-                    onPress: onOpenSettings,
-                    prefix: const Icon(FIcons.settings),
-                    child: const Text('前往设置'),
+                  GestureDetector(
+                    onTap: onOpenSettings,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            FIcons.settings,
+                            size: 16,
+                            color: colors.primaryForeground,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '前往设置',
+                            style: typography.sm.copyWith(
+                              color: colors.primaryForeground,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -542,15 +642,17 @@ class _MonthHeader extends StatelessWidget {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
     final label = DateFormat('yyyy年 MMMM', 'zh_CN').format(visibleMonth);
-    return FCard.raw(
+    return _DiarySurfaceCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           children: [
-            FButton.icon(
-              variant: FButtonVariant.ghost,
-              onPress: onPrev,
-              child: const Icon(FIcons.chevronLeft),
+            GestureDetector(
+              onTap: onPrev,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(FIcons.chevronLeft, color: colors.foreground),
+              ),
             ),
             Expanded(
               child: Center(
@@ -568,14 +670,43 @@ class _MonthHeader extends StatelessWidget {
                       ),
               ),
             ),
-            FButton.icon(
-              variant: FButtonVariant.ghost,
-              onPress: onNext,
-              child: const Icon(FIcons.chevronRight),
+            GestureDetector(
+              onTap: onNext,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(FIcons.chevronRight, color: colors.foreground),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Surface card style aligned with [CollectScreen] / home dashboard.
+class _DiarySurfaceCard extends StatelessWidget {
+  const _DiarySurfaceCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.theme.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? colors.background : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
@@ -598,13 +729,17 @@ class _CalendarCard extends StatelessWidget {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
     final first = DateTime(visibleMonth.year, visibleMonth.month, 1);
-    final daysInMonth = DateTime(visibleMonth.year, visibleMonth.month + 1, 0).day;
+    final daysInMonth = DateTime(
+      visibleMonth.year,
+      visibleMonth.month + 1,
+      0,
+    ).day;
     final leading = first.weekday - 1;
     final totalCells = ((leading + daysInMonth + 6) ~/ 7) * 7;
 
     const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
-    return FCard.raw(
+    return _DiarySurfaceCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
         child: Column(
@@ -693,7 +828,6 @@ class _DayCell extends StatelessWidget {
     }
     final isSelected = selected == d;
     final dot = hasEntry(d);
-    // InkWell must sit under a Material (FCard.raw does not provide one).
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
@@ -706,11 +840,7 @@ class _DayCell extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: isSelected ? colors.secondary : null,
-            border: Border.all(
-              color: isSelected ? colors.primary : Colors.transparent,
-              width: isSelected ? 1.5 : 1,
-            ),
+            color: isSelected ? colors.primary : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -718,7 +848,8 @@ class _DayCell extends StatelessWidget {
               Text(
                 '$d',
                 style: typography.sm.copyWith(
-                  color: isSelected ? colors.primary : colors.foreground,
+                  color:
+                      isSelected ? colors.primaryForeground : colors.foreground,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
@@ -728,7 +859,9 @@ class _DayCell extends StatelessWidget {
                 height: 5,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: dot ? colors.primary : Colors.transparent,
+                  color: dot
+                      ? (isSelected ? colors.primaryForeground : colors.primary)
+                      : Colors.transparent,
                 ),
               ),
             ],
@@ -740,10 +873,7 @@ class _DayCell extends StatelessWidget {
 }
 
 class _EntryCard extends StatelessWidget {
-  const _EntryCard({
-    required this.entry,
-    required this.onDelete,
-  });
+  const _EntryCard({required this.entry, required this.onDelete});
 
   final DiaryEntry entry;
   final VoidCallback onDelete;
@@ -753,7 +883,7 @@ class _EntryCard extends StatelessWidget {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
     final theme = Theme.of(context);
-    return FCard.raw(
+    return _DiarySurfaceCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
         child: Column(
@@ -764,7 +894,10 @@ class _EntryCard extends StatelessWidget {
               children: [
                 if (entry.timeLabel != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colors.secondary,
                       borderRadius: BorderRadius.circular(20),
@@ -788,13 +921,15 @@ class _EntryCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                FButton.icon(
-                  variant: FButtonVariant.ghost,
-                  onPress: onDelete,
-                  child: Icon(
-                    FIcons.trash2,
-                    size: 20,
-                    color: colors.mutedForeground,
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      FIcons.trash2,
+                      size: 20,
+                      color: colors.mutedForeground,
+                    ),
                   ),
                 ),
               ],

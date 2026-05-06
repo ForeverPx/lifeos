@@ -129,29 +129,31 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
     return bytes;
   }
 
-  Widget _buildThumb(XFile img) {
+  Widget _buildThumb(XFile img, {double extent = 86}) {
     return FutureBuilder<List<int>>(
       future: img.readAsBytes(),
       builder: (context, snap) {
         final bytes = snap.data;
         if (bytes == null || bytes.isEmpty) {
           return Container(
-            width: 86,
-            height: 86,
+            width: extent,
+            height: extent,
             decoration: BoxDecoration(
               color: context.theme.colors.secondary,
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: const FCircularProgress(size: FCircularProgressSizeVariant.sm),
+            child: const FCircularProgress(
+              size: FCircularProgressSizeVariant.sm,
+            ),
           );
         }
         return ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Image.memory(
             Uint8List.fromList(bytes),
-            width: 86,
-            height: 86,
+            width: extent,
+            height: extent,
             fit: BoxFit.cover,
           ),
         );
@@ -242,10 +244,7 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
       _images.clear();
       setState(() {});
       if (!mounted) return;
-      showFToast(
-        context: context,
-        title: const Text('已保存到 GitHub'),
-      );
+      showFToast(context: context, title: const Text('已保存到 GitHub'));
       Navigator.of(context).pop(true);
     } on LlmDiaryTaggerException catch (e) {
       if (!mounted) return;
@@ -275,8 +274,9 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
-    final bottomInset =
-        MediaQuery.viewInsetsOf(context).bottom + MediaQuery.paddingOf(context).bottom;
+    // FScaffold already shrinks the body by viewInsets.bottom (resizeToAvoidBottomInset: true).
+    // Only account for safe-area padding here to avoid double-counting.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     if (kIsWeb) {
       return FScaffold(
@@ -345,101 +345,149 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '图片（最多 3 张）',
-                              style: typography.sm.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: colors.foreground,
-                              ),
-                            ),
-                          ),
-                          FButton.icon(
-                            variant: FButtonVariant.ghost,
-                            onPress: _busy ? null : _pickImages,
-                            child: const Icon(FIcons.imagePlus),
-                          ),
-                        ],
-                      ),
-                      if (_images.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 86,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemBuilder: (context, index) {
-                              final img = _images[index];
-                              return Stack(
-                                children: [
-                                  _buildThumb(img),
-                                  Positioned(
-                                    right: 4,
-                                    top: 4,
-                                    child: Material(
-                                      color: Colors.black.withValues(alpha: 0.45),
-                                      borderRadius: BorderRadius.circular(999),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(999),
-                                        onTap: _busy
-                                            ? null
-                                            : () {
-                                                setState(() => _images.removeAt(index));
-                                              },
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(6),
-                                          child: Icon(
-                                            Icons.close,
-                                            size: 14,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final keyboardInset = MediaQuery.viewInsetsOf(
+                        context,
+                      ).bottom;
+                      final thumbExtent = keyboardInset > 0 ? 56.0 : 86.0;
+                      const chromeNoThumbs = 112.0;
+                      final chromeThumbsExtra = _images.isEmpty
+                          ? 0.0
+                          : 8.0 + thumbExtent;
+                      final fixedChrome = chromeNoThumbs + chromeThumbsExtra;
+                      final fieldHeight = (constraints.maxHeight - fixedChrome)
+                          .clamp(56.0, double.infinity);
+
+                      return SingleChildScrollView(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '图片（最多 3 张）',
+                                    style: typography.sm.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.foreground,
                                     ),
                                   ),
-                                ],
-                              );
-                            },
-                            separatorBuilder: (_, _) => const SizedBox(width: 10),
-                            itemCount: _images.length,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: FTextField(
-                          control: FTextFieldControl.managed(controller: _body),
-                          focusNode: _bodyFocus,
-                          autofocus: true,
-                          label: const Text('正文'),
-                          hint: '支持多段长文本…',
-                          description: ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: _body,
-                            builder: (context, value, _) {
-                              final n = value.text.characters.length;
-                              return Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  '$n 字',
-                                  style: typography.xs.copyWith(
-                                    color: colors.mutedForeground,
+                                ),
+                                FButton.icon(
+                                  variant: FButtonVariant.ghost,
+                                  onPress: _busy ? null : _pickImages,
+                                  child: const Icon(FIcons.imagePlus),
+                                ),
+                              ],
+                            ),
+                            if (_images.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: thumbExtent,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemBuilder: (context, index) {
+                                    final img = _images[index];
+                                    return Stack(
+                                      children: [
+                                        _buildThumb(img, extent: thumbExtent),
+                                        Positioned(
+                                          right: 4,
+                                          top: 4,
+                                          child: Material(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.45,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                              onTap: _busy
+                                                  ? null
+                                                  : () {
+                                                      setState(
+                                                        () => _images.removeAt(
+                                                          index,
+                                                        ),
+                                                      );
+                                                    },
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(6),
+                                                child: Icon(
+                                                  Icons.close,
+                                                  size: 14,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(width: 10),
+                                  itemCount: _images.length,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '正文',
+                                    style: typography.sm.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.foreground,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                          maxLines: null,
-                          expands: true,
-                          keyboardType: TextInputType.multiline,
-                          textCapitalization: TextCapitalization.sentences,
-                          enabled: !_busy,
+                                ValueListenableBuilder<TextEditingValue>(
+                                  valueListenable: _body,
+                                  builder: (context, value, _) {
+                                    final n = value.text.characters.length;
+                                    return Text(
+                                      '$n 字',
+                                      style: typography.xs.copyWith(
+                                        color: colors.mutedForeground,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: fieldHeight,
+                              child: FTextField(
+                                control: FTextFieldControl.managed(
+                                  controller: _body,
+                                ),
+                                focusNode: _bodyFocus,
+                                autofocus: true,
+                                label: null,
+                                hint: '支持多段长文本…',
+                                description: null,
+                                maxLines: null,
+                                expands: true,
+                                keyboardType: TextInputType.multiline,
+                                textCapitalization:
+                                    TextCapitalization.sentences,
+                                enabled: !_busy,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -448,7 +496,9 @@ class _DiaryComposeScreenState extends State<DiaryComposeScreen> {
                 child: FButton(
                   onPress: _busy ? null : _submit,
                   prefix: _busy
-                      ? const FCircularProgress(size: FCircularProgressSizeVariant.sm)
+                      ? const FCircularProgress(
+                          size: FCircularProgressSizeVariant.sm,
+                        )
                       : const Icon(FIcons.sparkles),
                   child: Text(
                     _busy ? (_busyLabel ?? '打标签并保存中…') : '打标签并保存到 GitHub',
