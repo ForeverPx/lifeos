@@ -142,12 +142,22 @@ class CheckinGlobalStatsDocument {
     final raw = map['weeks'];
     final weeks = <String, CheckinWeekRollup>{};
     if (raw is Map<String, dynamic>) {
+      // v2 format: { "weeks": { "2026-W18": { ... }, ... } }
       for (final e in raw.entries) {
         final v = e.value;
         if (v is Map<String, dynamic>) {
           final r = CheckinWeekRollup.fromJson(e.key, v);
           if (r != null) weeks[e.key] = r;
         }
+      }
+    } else if (raw is List) {
+      // Legacy format tolerance: { "weeks": [ { "weekId": "2026-W18", ... }, ... ] }
+      for (final item in raw) {
+        if (item is! Map<String, dynamic>) continue;
+        final id = item['weekId'];
+        if (id is! String || id.trim().isEmpty) continue;
+        final r = CheckinWeekRollup.fromJson(id.trim(), item);
+        if (r != null) weeks[id.trim()] = r;
       }
     }
     return CheckinGlobalStatsDocument(weeks: weeks);

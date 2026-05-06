@@ -33,6 +33,48 @@ class _CheckinScreenState extends State<CheckinScreen> {
   CheckinGlobalStatsDocument _globalStats = CheckinGlobalStatsDocument.empty();
   String? _statsError;
 
+  DateTime _today() {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  Future<CheckinGlobalStatsDocument> _backfillRecentWeekRollupsIfMissing({
+    required DateTime today,
+    required CheckinGlobalStatsDocument globalStats,
+    WeeklyCheckinState? currentWeekLiveState,
+  }) async {
+    final bounds = CheckinWeekBounds.forLocalDate(today);
+    final recent = CheckinWeekBounds.lastNWeeksNewestFirst(today, 12);
+
+    final missing = <String>[];
+    for (final w in recent) {
+      if (w.weekId == bounds.weekId) continue; // current week already has live state
+      if (!globalStats.weeks.containsKey(w.weekId)) missing.add(w.weekId);
+    }
+    if (missing.isEmpty) return globalStats;
+
+    final rollups = <String, CheckinWeekRollup>{};
+    for (final id in missing) {
+      final b = CheckinWeekBounds.tryParseWeekId(id);
+      if (b == null) continue;
+      try {
+        final snap = await _repo.fetchWeek(id);
+        // If the file is missing (404), repo returns empty state; keep it as "missing stats".
+        if (snap.fileSha == null) continue;
+        rollups[id] = CheckinWeekRollup.fromState(snap.state, b);
+      } catch (_) {
+        // Ignore backfill failures; calendar will show "暂无统计".
+      }
+    }
+
+    if (rollups.isEmpty) return globalStats;
+    var next = globalStats;
+    for (final r in rollups.values) {
+      next = next.upsertWeek(r);
+    }
+    return next;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -61,14 +103,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
     await _loadTokenAndRefresh();
   }
 
-  DateTime _today() {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
-
   Future<void> _refreshWeek() async {
     if (!_repo.hasToken || kIsWeb) return;
-    final bounds = CheckinWeekBounds.forLocalDate(_today());
+    final today = _today();
+    final bounds = CheckinWeekBounds.forLocalDate(today);
     setState(() {
       _loadingWeek = true;
       _loadError = null;
@@ -88,11 +126,18 @@ class _CheckinScreenState extends State<CheckinScreen> {
         );
         statsLoadErr = e.toString();
       }
+
+      final mergedStats = await _backfillRecentWeekRollupsIfMissing(
+        today: today,
+        globalStats: statsSnap.document,
+        currentWeekLiveState: weekSnap.state,
+      );
+
       if (!mounted) return;
       setState(() {
         _state = weekSnap.state;
         _fileSha = weekSnap.fileSha;
-        _globalStats = statsSnap.document;
+        _globalStats = mergedStats;
         _statsError = statsLoadErr;
         _loadingWeek = false;
         _loadError = null;
@@ -118,7 +163,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
 
   Future<void> _toggle(String projectId, String ymd) async {
     if (_saving || _state == null || kIsWeb) return;
-    final bounds = CheckinWeekBounds.forLocalDate(_today());
+    final today = _today();
+    final bounds = CheckinWeekBounds.forLocalDate(today);
     if (_state!.weekId != bounds.weekId) {
       await _refreshWeek();
       return;
@@ -141,13 +187,22 @@ class _CheckinScreenState extends State<CheckinScreen> {
       setState(() {
         _fileSha = outcome.weekFileSha;
         if (outcome.globalStatsUpdated && outcome.globalStatsDocument != null) {
-          _globalStats = outcome.globalStatsDocument!;
+          // Merge the server's response INTO the existing _globalStats so that
+          // weeks already loaded (including client-side backfilled ones like W18)
+          // are never dropped when the server returns a document that only contains
+          // the just-saved week.
+          var merged = _globalStats;
+          for (final entry in outcome.globalStatsDocument!.weeks.entries) {
+            merged = merged.upsertWeek(entry.value);
+          }
+          _globalStats = merged;
           _statsError = null;
         } else if (!outcome.globalStatsUpdated) {
           _statsError = outcome.globalStatsError;
         }
         _saving = false;
       });
+
       if (!outcome.globalStatsUpdated &&
           outcome.globalStatsError != null &&
           mounted) {
