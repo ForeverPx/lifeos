@@ -2,13 +2,13 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-[![Flutter](https://img.shields.io/badge/Flutter-stable-02569B?logo=flutter)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-%5E3.11-0175C2?logo=dart)](https://dart.dev)
-[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey)]()
+[Flutter](https://flutter.dev)
+[Dart](https://dart.dev)
+[Platform]()
 
 **LifeOS** is a cross-platform personal productivity client built with [Flutter](https://flutter.dev). It connects a GitHub repository as the source of truth for diary entries, saved items, and habit check-ins, with optional OpenAI-compatible LLM endpoints for assisted tagging and naming.
 
-<img width="1923" height="818" alt="cover-lifeos-v1" src="https://github.com/user-attachments/assets/7993da90-d09f-4fa6-80b3-00790cdc37db" />
+
 
 ---
 
@@ -30,13 +30,15 @@
 
 ## Features
 
-| Area | Description |
-|------|-------------|
-| **Home** | Dashboard summarizing today’s diary and collect activity when GitHub is configured. |
-| **Diary** | Markdown-backed diary stored and versioned via the GitHub Contents API; optional LLM-assisted tagging. |
-| **Collect** | Curated captures in-repo with parsing and optional LLM-assisted file naming. |
-| **Check-in** | Week-oriented check-in views and statistics backed by GitHub data. |
+
+| Area         | Description                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Home**     | Dashboard summarizing today’s diary and collect activity when GitHub is configured.                                                                     |
+| **Diary**    | Markdown-backed diary stored and versioned via the GitHub Contents API; optional LLM-assisted tagging.                                                  |
+| **Collect**  | Curated captures in-repo with parsing and optional LLM-assisted file naming.                                                                            |
+| **Check-in** | Week-oriented check-in views and statistics backed by GitHub data.                                                                                      |
 | **Settings** | GitHub personal access token, owner/repository, theme preference, LLM provider (OpenAI-compatible), base URL, model, and API key; local cache controls. |
+
 
 Storage and secrets use platform-appropriate secure storage where applicable (`flutter_secure_storage`, `shared_preferences`).
 
@@ -79,7 +81,7 @@ If you use a fresh empty repository, you can start without pre-creating any fold
 
 ## Requirements
 
-- [Flutter](https://docs.flutter.dev/get-started/install) (stable channel), compatible with **Dart ^3.11** as declared in [`pubspec.yaml`](pubspec.yaml).
+- [Flutter](https://docs.flutter.dev/get-started/install) (stable channel), compatible with **Dart ^3.11** as declared in `[pubspec.yaml](pubspec.yaml)`.
 - **iOS:** macOS, Xcode, CocoaPods (for native dependencies when building iOS).
 - **Android:** Android SDK / Android Studio as per Flutter’s Android toolchain.
 
@@ -110,18 +112,16 @@ flutter test
 
 All sensitive values are entered in-app under **Settings** (not committed to the repository).
 
-1. **GitHub**  
-   - Create a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with access to the target repo.  
-   - Set **owner** and **repository** name to match where diary, collect, and check-in data should live.
-   - Recommended: **fine-grained PAT** scoped to a single repository with **Contents** and **Metadata** read/write.
-
-2. **LLM (optional)**  
-   - Choose an OpenAI-compatible provider.  
-   - Set **base URL**, **model**, and **API key** to match your deployment.  
-   - User-configured base URLs may use `http://` during development; prefer **HTTPS** for production.
-
-3. **Bundle / application IDs**  
-   - iOS bundle identifier and Android `applicationId` are aligned (e.g. `com.lifeos.lifeos`). Adjust in Xcode / Gradle if you fork the project.
+1. **GitHub**
+  - Create a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) with access to the target repo.  
+  - Set **owner** and **repository** name to match where diary, collect, and check-in data should live.
+  - Recommended: **fine-grained PAT** scoped to a single repository with **Contents** and **Metadata** read/write.
+2. **LLM (optional)**
+  - Choose an OpenAI-compatible provider.  
+  - Set **base URL**, **model**, and **API key** to match your deployment.  
+  - User-configured base URLs may use `http://` during development; prefer **HTTPS** for production.
+3. **Bundle / application IDs**
+  - iOS bundle identifier and Android `applicationId` are aligned (e.g. `com.lifeos.lifeos`). Adjust in Xcode / Gradle if you fork the project.
 
 ---
 
@@ -129,13 +129,13 @@ All sensitive values are entered in-app under **Settings** (not committed to the
 
 ### iOS
 
-- Open [`ios/Runner.xcworkspace`](ios/Runner.xcworkspace) in Xcode, select the **Runner** target, then **Signing & Capabilities**, and assign your **Team** for device runs and App Store archives.
+- Open `[ios/Runner.xcworkspace](ios/Runner.xcworkspace)` in Xcode, select the **Runner** target, then **Signing & Capabilities**, and assign your **Team** for device runs and App Store archives.
 - Simulator: `flutter run -d ios`
 - Unsigned release artifact (e.g. for CI): `flutter build ios --no-codesign`
 
-**App Transport Security:** [`ios/Runner/Info.plist`](ios/Runner/Info.plist) may allow arbitrary HTTP loads so that development LLM endpoints over `http://` work. Before App Store submission, tighten ATS (e.g. per-domain exceptions) when your hosts are known.
+**App Transport Security:** `[ios/Runner/Info.plist](ios/Runner/Info.plist)` may allow arbitrary HTTP loads so that development LLM endpoints over `http://` work. Before App Store submission, tighten ATS (e.g. per-domain exceptions) when your hosts are known.
 
-**CocoaPods:** A [`Podfile`](ios/Podfile) is maintained under `ios/`; `flutter build ios` / `flutter run` run `pod install` as needed.
+**CocoaPods:** A `[Podfile](ios/Podfile)` is maintained under `ios/`; `flutter build ios` / `flutter run` run `pod install` as needed.
 
 ### Android
 
@@ -151,7 +151,7 @@ Configure signing in `android/app/build.gradle.kts` and your keystore per [Flutt
 
 ## Continuous integration
 
-GitHub Actions workflow [`.github/workflows/ios.yml`](.github/workflows/ios.yml) runs on pushes and pull requests to `main` and `master`:
+GitHub Actions workflow `[.github/workflows/ios.yml](.github/workflows/ios.yml)` runs on pushes and pull requests to `main` and `master`:
 
 - `flutter pub get`
 - `flutter test`
@@ -165,10 +165,10 @@ Extend with Android jobs if you need parity on CI.
 
 Contributions are welcome.
 
-1. Open an **issue** to describe a bug or proposal, or comment on an existing one.  
-2. Fork the repository and create a **feature branch** from `main` (or the default branch).  
-3. Keep changes focused; follow existing Dart style and [`analysis_options.yaml`](analysis_options.yaml).  
-4. Run `flutter test` and ensure CI-relevant builds pass locally.  
+1. Open an **issue** to describe a bug or proposal, or comment on an existing one.
+2. Fork the repository and create a **feature branch** from `main` (or the default branch).
+3. Keep changes focused; follow existing Dart style and `[analysis_options.yaml](analysis_options.yaml)`.
+4. Run `flutter test` and ensure CI-relevant builds pass locally.
 5. Open a **pull request** with a clear description and, when applicable, screenshots for UI changes.
 
 ---
@@ -192,3 +192,4 @@ This repository does not currently include a root-level `LICENSE` file. If you i
 - [Flutter](https://flutter.dev) and the Dart team  
 - [Forui](https://forui.dev/)  
 - [GitHub REST API](https://docs.github.com/en/rest)
+
