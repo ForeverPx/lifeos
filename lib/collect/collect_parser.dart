@@ -1,3 +1,5 @@
+import '../config/github_raw_url.dart';
+
 String titleFromContent({
   required String fileName,
   required String content,
@@ -56,7 +58,8 @@ String? firstMarkdownImageUrl(String body) {
   final v = raw.startsWith('<') && raw.endsWith('>')
       ? raw.substring(1, raw.length - 1).trim()
       : raw;
-  return v.isEmpty ? null : v;
+  if (v.isEmpty) return null;
+  return stableGithubRawUrl(v);
 }
 
 String normalizeBody(String content) {

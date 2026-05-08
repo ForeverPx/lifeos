@@ -4,6 +4,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 
+import '../config/github_raw_url.dart';
 import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
@@ -345,8 +346,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color:
-                                    isDark ? colors.secondary : Colors.white,
+                                color: isDark ? colors.secondary : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
@@ -468,6 +468,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                       padding: const EdgeInsets.only(bottom: 14),
                       child: _EntryCard(
                         entry: _entries[index],
+                        imageToken: _repo.token,
                         onDelete: () => _deleteEntry(_entries[index]),
                       ),
                     );
@@ -848,8 +849,9 @@ class _DayCell extends StatelessWidget {
               Text(
                 '$d',
                 style: typography.sm.copyWith(
-                  color:
-                      isSelected ? colors.primaryForeground : colors.foreground,
+                  color: isSelected
+                      ? colors.primaryForeground
+                      : colors.foreground,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
@@ -873,9 +875,14 @@ class _DayCell extends StatelessWidget {
 }
 
 class _EntryCard extends StatelessWidget {
-  const _EntryCard({required this.entry, required this.onDelete});
+  const _EntryCard({
+    required this.entry,
+    required this.imageToken,
+    required this.onDelete,
+  });
 
   final DiaryEntry entry;
+  final String imageToken;
   final VoidCallback onDelete;
 
   @override
@@ -954,12 +961,17 @@ class _EntryCard extends StatelessWidget {
                         a: typography.sm.copyWith(color: colors.primary),
                       ),
                       imageBuilder: (uri, title, alt) {
+                        final image = githubImageRequest(
+                          uri.toString(),
+                          token: imageToken,
+                        );
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(
-                              uri.toString(),
+                              image.url,
+                              headers: image.headers,
                               fit: BoxFit.cover,
                               loadingBuilder: (context, child, progress) {
                                 if (progress == null) return child;

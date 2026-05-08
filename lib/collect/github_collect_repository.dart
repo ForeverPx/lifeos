@@ -2,12 +2,14 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/github_raw_url.dart';
 import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import 'collect_cache.dart';
 
 class GithubCollectRepository {
-  GithubCollectRepository({String? token}) : _token = token ?? GitHubToken.value;
+  GithubCollectRepository({String? token})
+    : _token = token ?? GitHubToken.value;
 
   static const basePrefix = 'collect';
   static const mediaPrefix = '$basePrefix/media';
@@ -15,22 +17,23 @@ class GithubCollectRepository {
   String _token;
 
   bool get hasToken => _token.isNotEmpty;
+  String get token => _token;
 
   void setToken(String token) {
     _token = token.trim();
   }
 
   Map<String, String> get _headers => {
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
-        'User-Agent': 'lifeos-collect',
-      };
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
+    'User-Agent': 'lifeos-collect',
+  };
 
   Map<String, String> get _jsonHeaders => {
-        ..._headers,
-        'Content-Type': 'application/json',
-      };
+    ..._headers,
+    'Content-Type': 'application/json',
+  };
 
   Uri _contentsUri(String path) {
     final encoded = path.split('/').map(Uri.encodeComponent).join('/');
@@ -72,7 +75,9 @@ class GithubCollectRepository {
       uri,
       headers: _jsonHeaders,
       body: jsonEncode({
-        'message': message.trim().isEmpty ? 'lifeos: upload media' : message.trim(),
+        'message': message.trim().isEmpty
+            ? 'lifeos: upload media'
+            : message.trim(),
         'content': base64Encode(bytes),
       }),
     );
@@ -88,7 +93,10 @@ class GithubCollectRepository {
     if (content is Map<String, dynamic>) {
       final downloadUrl = content['download_url'] as String?;
       if (downloadUrl != null && downloadUrl.trim().isNotEmpty) {
-        return (path: path, downloadUrl: downloadUrl.trim());
+        return (
+          path: path,
+          downloadUrl: stableGithubRawUrl(downloadUrl.trim()),
+        );
       }
     }
     final o = GitHubRepoPrefs.owner;
@@ -235,7 +243,9 @@ class GithubCollectRepository {
       headers: _jsonHeaders,
       body: jsonEncode({
         'message': 'lifeos: 新增收藏 $folder/$name',
-        'content': base64Encode(utf8.encode(utf8Content.replaceAll('\r\n', '\n'))),
+        'content': base64Encode(
+          utf8.encode(utf8Content.replaceAll('\r\n', '\n')),
+        ),
       }),
     );
     if (putRes.statusCode != 200 && putRes.statusCode != 201) {
@@ -342,4 +352,3 @@ class GithubCollectException implements Exception {
   @override
   String toString() => message;
 }
-

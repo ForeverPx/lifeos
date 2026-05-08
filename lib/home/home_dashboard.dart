@@ -11,6 +11,7 @@ import '../collect/collect_models.dart';
 import '../collect/collect_parser.dart';
 import '../collect/collect_compose_screen.dart';
 import '../collect/github_collect_repository.dart';
+import '../config/github_raw_url.dart';
 import '../config/github_repo_prefs.dart';
 import '../config/github_token.dart';
 import '../config/token_store.dart';
@@ -298,7 +299,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
       mainAxisMaxRatio: 0.88,
       builder: (ctx) => ColoredBox(
         color: FTheme.of(ctx).colors.background,
-        child: _DiaryEntryPreviewSheet(entry: entry),
+        child: _DiaryEntryPreviewSheet(
+          entry: entry,
+          imageToken: _diaryRepo.token,
+        ),
       ),
     );
   }
@@ -310,7 +314,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
       mainAxisMaxRatio: 0.88,
       builder: (ctx) => ColoredBox(
         color: FTheme.of(ctx).colors.background,
-        child: _CollectItemPreviewSheet(item: item),
+        child: _CollectItemPreviewSheet(
+          item: item,
+          imageToken: _collectRepo.token,
+        ),
       ),
     );
   }
@@ -336,10 +343,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final today = _today();
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => CollectComposeScreen(
-          repo: _collectRepo,
-          day: today,
-        ),
+        builder: (_) => CollectComposeScreen(repo: _collectRepo, day: today),
       ),
     );
     if (changed == true && mounted) {
@@ -382,183 +386,201 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'LifeOS',
-                                        style: typography.xl.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: colors.foreground,
-                                          height: 1.1,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: colors.primary.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          'v1.0',
-                                          style: typography.sm.copyWith(
-                                            color: colors.primary,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'LifeOS',
+                                          style: typography.xl.copyWith(
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 13,
+                                            color: colors.foreground,
+                                            height: 1.1,
                                           ),
                                         ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colors.primary.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'v1.0',
+                                            style: typography.sm.copyWith(
+                                              color: colors.primary,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      dateLine,
+                                      style: typography.sm.copyWith(
+                                        color: colors.mutedForeground,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    dateLine,
-                                    style: typography.sm.copyWith(
-                                      color: colors.mutedForeground,
-                                      fontWeight: FontWeight.w500,
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _greeting(),
-                                    style: typography.lg.copyWith(
-                                      color: colors.foreground,
-                                      height: 1.35,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _openSettings,
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: isDark ? colors.secondary : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _greeting(),
+                                      style: typography.lg.copyWith(
+                                        color: colors.foreground,
+                                        height: 1.35,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                child: Icon(
-                                  Icons.settings_outlined,
-                                  size: 20,
-                                  color: colors.mutedForeground,
+                              ),
+                              GestureDetector(
+                                onTap: _openSettings,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? colors.secondary
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: isDark ? 0.2 : 0.04,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.settings_outlined,
+                                    size: 20,
+                                    color: colors.mutedForeground,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const _ConnectionChip(),
+                          if (_summaryError != null) ...[
+                            const SizedBox(height: 12),
+                            _ErrorBanner(message: _summaryError!),
                           ],
-                        ),
-                        const SizedBox(height: 8),
-                        const _ConnectionChip(),
-                        if (_summaryError != null) ...[
-                          const SizedBox(height: 12),
-                          _ErrorBanner(message: _summaryError!),
-                        ],
-                        const SizedBox(height: 24),
-                        // Diary Card
-                        _HomeCard(
-                          icon: Icons.menu_book_rounded,
-                          iconColor: const Color(0xFF2563EB),
-                          iconBgColor: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                          title: '日记',
-                          badgeColor: const Color(0xFF2563EB),
-                          action: _HomeCardAction(
-                            label: '新增',
-                            icon: Icons.add_rounded,
-                            onTap: _openDiaryComposeToday,
-                          ),
-                          onTap: () {
-                            if (_diaryToday.isEmpty) {
+                          const SizedBox(height: 24),
+                          // Diary Card
+                          _HomeCard(
+                            icon: Icons.menu_book_rounded,
+                            iconColor: const Color(0xFF2563EB),
+                            iconBgColor: const Color(
+                              0xFF2563EB,
+                            ).withValues(alpha: 0.1),
+                            title: '日记',
+                            badgeColor: const Color(0xFF2563EB),
+                            action: _HomeCardAction(
+                              label: '新增',
+                              icon: Icons.add_rounded,
+                              onTap: _openDiaryComposeToday,
+                            ),
+                            onTap: () {
+                              if (_diaryToday.isEmpty) {
+                                widget.onOpenTab(1);
+                                return;
+                              }
+                              if (_isRecentDiaryNotToday(today)) {
+                                _openDiaryPreview(_diaryToday.first);
+                                return;
+                              }
                               widget.onOpenTab(1);
-                              return;
-                            }
-                            if (_isRecentDiaryNotToday(today)) {
-                              _openDiaryPreview(_diaryToday.first);
-                              return;
-                            }
-                            widget.onOpenTab(1);
-                          },
-                          child: _DiaryCardContent(
-                            entries: _diaryToday,
-                            diaryDay: _diarySummaryDay,
-                            today: today,
+                            },
+                            child: _DiaryCardContent(
+                              entries: _diaryToday,
+                              diaryDay: _diarySummaryDay,
+                              today: today,
+                              imageToken: _diaryRepo.token,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        // Collect Card
-                        _HomeCard(
-                          icon: Icons.bookmark_rounded,
-                          iconColor: const Color(0xFFF59E0B),
-                          iconBgColor: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                          title: '收藏',
-                          badgeColor: const Color(0xFFF59E0B),
-                          action: _HomeCardAction(
-                            label: '新增',
-                            icon: Icons.add_rounded,
-                            onTap: _openCollectComposeToday,
-                          ),
-                          onTap: () {
-                            if (_collectToday.isEmpty) {
+                          const SizedBox(height: 14),
+                          // Collect Card
+                          _HomeCard(
+                            icon: Icons.bookmark_rounded,
+                            iconColor: const Color(0xFFF59E0B),
+                            iconBgColor: const Color(
+                              0xFFF59E0B,
+                            ).withValues(alpha: 0.1),
+                            title: '收藏',
+                            badgeColor: const Color(0xFFF59E0B),
+                            action: _HomeCardAction(
+                              label: '新增',
+                              icon: Icons.add_rounded,
+                              onTap: _openCollectComposeToday,
+                            ),
+                            onTap: () {
+                              if (_collectToday.isEmpty) {
+                                widget.onOpenTab(2);
+                                return;
+                              }
+                              if (_isRecentCollectNotToday(today)) {
+                                _openCollectPreview(_collectToday.first);
+                                return;
+                              }
                               widget.onOpenTab(2);
-                              return;
-                            }
-                            if (_isRecentCollectNotToday(today)) {
-                              _openCollectPreview(_collectToday.first);
-                              return;
-                            }
-                            widget.onOpenTab(2);
-                          },
-                          child: _CollectCardContent(
-                            items: _collectToday,
-                            collectDay: _collectSummaryDay,
-                            today: today,
+                            },
+                            child: _CollectCardContent(
+                              items: _collectToday,
+                              collectDay: _collectSummaryDay,
+                              today: today,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        // Checkin Card
-                        _HomeCard(
-                          icon: Icons.check_circle_rounded,
-                          iconColor: const Color(0xFF10B981),
-                          iconBgColor: const Color(0xFF10B981).withValues(alpha: 0.1),
-                          title: '打卡',
-                          badgeColor: const Color(0xFF10B981),
-                          onTap: () => widget.onOpenTab(3),
-                          child: _CheckinCardContent(state: _checkinState),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
+                          const SizedBox(height: 14),
+                          // Checkin Card
+                          _HomeCard(
+                            icon: Icons.check_circle_rounded,
+                            iconColor: const Color(0xFF10B981),
+                            iconBgColor: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.1),
+                            title: '打卡',
+                            badgeColor: const Color(0xFF10B981),
+                            onTap: () => widget.onOpenTab(3),
+                            child: _CheckinCardContent(state: _checkinState),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_loadingSummary)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: FCircularProgress(
+                      size: FCircularProgressSizeVariant.sm,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          if (_loadingSummary)
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  child: FCircularProgress(
-                    size: FCircularProgressSizeVariant.sm,
-                  ),
-                ),
               ),
-            ),
           ],
         ),
       ),
@@ -695,10 +717,14 @@ class _HomeCardActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: isDark ? colors.secondary.withValues(alpha: 0.35) : const Color(0xFFF3F4F6),
+          color: isDark
+              ? colors.secondary.withValues(alpha: 0.35)
+              : const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: isDark ? colors.border.withValues(alpha: 0.8) : const Color(0xFFE5E7EB),
+            color: isDark
+                ? colors.border.withValues(alpha: 0.8)
+                : const Color(0xFFE5E7EB),
           ),
         ),
         child: Row(
@@ -726,11 +752,13 @@ class _DiaryCardContent extends StatelessWidget {
     required this.entries,
     required this.diaryDay,
     required this.today,
+    required this.imageToken,
   });
 
   final List<DiaryEntry> entries;
   final DateTime? diaryDay;
   final DateTime today;
+  final String imageToken;
 
   String _subtitle(DiaryEntry e) {
     final parts = <String>[];
@@ -740,9 +768,7 @@ class _DiaryCardContent extends StatelessWidget {
     final src = e.source.trim();
     if (src.isNotEmpty) {
       final oneLine = src.replaceAll(RegExp(r'\s+'), ' ');
-      parts.add(
-        oneLine.length > 48 ? '${oneLine.substring(0, 48)}…' : oneLine,
-      );
+      parts.add(oneLine.length > 48 ? '${oneLine.substring(0, 48)}…' : oneLine);
     }
     return parts.join(' · ');
   }
@@ -763,11 +789,18 @@ class _DiaryCardContent extends StatelessWidget {
     }
 
     final entry = entries.first;
-    final isRecent = diaryDay != null &&
-        !(diaryDay!.year == today.year && diaryDay!.month == today.month && diaryDay!.day == today.day);
+    final thumbUrl = firstMarkdownImageUrl(entry.source);
+    final thumbImage = thumbUrl == null
+        ? null
+        : githubImageRequest(thumbUrl, token: imageToken);
+    final isRecent =
+        diaryDay != null &&
+        !(diaryDay!.year == today.year &&
+            diaryDay!.month == today.month &&
+            diaryDay!.day == today.day);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final textContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (isRecent && diaryDay != null)
           Text(
@@ -808,6 +841,51 @@ class _DiaryCardContent extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ],
+    );
+
+    if (thumbImage == null) return textContent;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: textContent),
+        const SizedBox(width: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            thumbImage.url,
+            headers: thumbImage.headers,
+            width: 72,
+            height: 72,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Container(
+                width: 72,
+                height: 72,
+                alignment: Alignment.center,
+                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                child: const FCircularProgress(
+                  size: FCircularProgressSizeVariant.sm,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 72,
+                height: 72,
+                alignment: Alignment.center,
+                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  size: 22,
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
@@ -886,9 +964,7 @@ class _CollectCardContent extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               DateFormat('yyyy年MM月dd日', 'zh_CN').format(collectDay ?? today),
-              style: typography.xs2.copyWith(
-                color: colors.mutedForeground,
-              ),
+              style: typography.xs2.copyWith(color: colors.mutedForeground),
             ),
           ],
         ),
@@ -910,9 +986,7 @@ class _CheckinCardContent extends StatelessWidget {
     if (state == null) {
       return Text(
         '本周习惯完成情况',
-        style: typography.sm.copyWith(
-          color: colors.mutedForeground,
-        ),
+        style: typography.sm.copyWith(color: colors.mutedForeground),
       );
     }
 
@@ -925,9 +999,7 @@ class _CheckinCardContent extends StatelessWidget {
       children: [
         Text(
           '本周习惯完成情况',
-          style: typography.sm.copyWith(
-            color: colors.mutedForeground,
-          ),
+          style: typography.sm.copyWith(color: colors.mutedForeground),
         ),
         const SizedBox(height: 12),
         Row(
@@ -948,7 +1020,8 @@ class _CheckinCardContent extends StatelessWidget {
                     const SizedBox(height: 6),
                     _WeekDot(
                       checked: _anyCheckedOnDay(bounds.days[i]),
-                      isToday: CheckinWeekBounds.ymd(bounds.days[i]) == todayYmd,
+                      isToday:
+                          CheckinWeekBounds.ymd(bounds.days[i]) == todayYmd,
                     ),
                   ],
                 ),
@@ -1033,12 +1106,13 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-MarkdownStyleSheet _homeMarkdownSheet(ThemeData theme, FColors colors, FTypography typography) {
+MarkdownStyleSheet _homeMarkdownSheet(
+  ThemeData theme,
+  FColors colors,
+  FTypography typography,
+) {
   return MarkdownStyleSheet.fromTheme(theme).copyWith(
-    p: typography.sm.copyWith(
-      height: 1.55,
-      color: colors.mutedForeground,
-    ),
+    p: typography.sm.copyWith(height: 1.55, color: colors.mutedForeground),
     h1: typography.xl.copyWith(
       fontWeight: FontWeight.w700,
       color: colors.foreground,
@@ -1082,10 +1156,59 @@ MarkdownStyleSheet _homeMarkdownSheet(ThemeData theme, FColors colors, FTypograp
   );
 }
 
+Widget Function(Uri uri, String? title, String? alt) _homeMarkdownImageBuilder(
+  FColors colors,
+  FTypography typography,
+  String imageToken,
+) {
+  return (uri, title, alt) {
+    final image = githubImageRequest(uri.toString(), token: imageToken);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          image.url,
+          headers: image.headers,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              height: 180,
+              alignment: Alignment.center,
+              color: colors.secondary,
+              child: const FCircularProgress(
+                size: FCircularProgressSizeVariant.sm,
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.secondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '图片加载失败：$error',
+                style: typography.xs.copyWith(color: colors.mutedForeground),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  };
+}
+
 class _DiaryEntryPreviewSheet extends StatelessWidget {
-  const _DiaryEntryPreviewSheet({required this.entry});
+  const _DiaryEntryPreviewSheet({
+    required this.entry,
+    required this.imageToken,
+  });
 
   final DiaryEntry entry;
+  final String imageToken;
 
   @override
   Widget build(BuildContext context) {
@@ -1162,7 +1285,16 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
                       )
                     : MarkdownBody(
                         data: bodyMd,
-                        styleSheet: _homeMarkdownSheet(theme, colors, typography),
+                        styleSheet: _homeMarkdownSheet(
+                          theme,
+                          colors,
+                          typography,
+                        ),
+                        imageBuilder: _homeMarkdownImageBuilder(
+                          colors,
+                          typography,
+                          imageToken,
+                        ),
                       ),
               ),
             ),
@@ -1174,9 +1306,13 @@ class _DiaryEntryPreviewSheet extends StatelessWidget {
 }
 
 class _CollectItemPreviewSheet extends StatelessWidget {
-  const _CollectItemPreviewSheet({required this.item});
+  const _CollectItemPreviewSheet({
+    required this.item,
+    required this.imageToken,
+  });
 
   final CollectItem item;
+  final String imageToken;
 
   @override
   Widget build(BuildContext context) {
@@ -1215,9 +1351,7 @@ class _CollectItemPreviewSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
               item.path,
-              style: typography.xs.copyWith(
-                color: colors.mutedForeground,
-              ),
+              style: typography.xs.copyWith(color: colors.mutedForeground),
             ),
           ),
           Expanded(
@@ -1234,7 +1368,16 @@ class _CollectItemPreviewSheet extends StatelessWidget {
                       )
                     : MarkdownBody(
                         data: item.body,
-                        styleSheet: _homeMarkdownSheet(theme, colors, typography),
+                        styleSheet: _homeMarkdownSheet(
+                          theme,
+                          colors,
+                          typography,
+                        ),
+                        imageBuilder: _homeMarkdownImageBuilder(
+                          colors,
+                          typography,
+                          imageToken,
+                        ),
                       ),
               ),
             ),
