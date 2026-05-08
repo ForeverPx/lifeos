@@ -1,0 +1,54 @@
+lib/collect/collect_screen.dart
+  b37b86070863c58d 9
+  18ca72259b9251c2 88-89,100,227-239,242-276,279-304,307-315,318-328,330-335,337-339,341,344-360,362-363,367-410,416-424,427-435,439-442,446-447,451-452,464,467-468,470-471,473,572,671-673,711-714,716-718,764-768,771-789,801-804,807-810,890-891,941-945,1008-1010
+lib/collect/github_collect_repository.dart
+  18ca72259b9251c2 11-12,27-31,34-36,78-80,96-99,246-248
+  b37b86070863c58d 5
+lib/collect/collect_parser.dart
+  b37b86070863c58d 1-2,61-62
+lib/diary/diary_screen.dart
+  b37b86070863c58d 7
+  18ca72259b9251c2 349,852-854
+lib/home/home_dashboard.dart
+  b37b86070863c58d 14,1159-1161,1163-1164,1166-1170,1173-1193,1195-1203,1293-1294,1297,1376-1377,1380
+  18ca72259b9251c2 346,389-402,404-405,408-431,433-439,441-448,452-477,480,482-511,513-517,519,521-544,546-551,553-568,571-572,574-580,720-722,725-727,771,796-800,967,989,1002,1023-1024,1109-1113,1115,1194,1288-1292,1354,1371-1375
+lib/diary/github_diary_repository.dart
+  b37b86070863c58d 5
+  18ca72259b9251c2 28-32,35-37,56,82-84,100-103,188,229-232,305-308
+lib/config/github_raw_url.dart
+  b37b86070863c58d 1-22
+  18ca72259b9251c2 66-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.11",
+  "base_commit_sha": "63b4d0170f23452876db571911632f532e8b7193",
+  "prompts": {
+    "18ca72259b9251c2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e0517-51cc-70e3-9c1a-d6ea07d784a8",
+        "model": "gpt-5.5"
+      },
+      "human_author": "panxiao <panxiao@cvte.com>",
+      "messages": [],
+      "total_additions": 517,
+      "total_deletions": 439,
+      "accepted_lines": 517,
+      "overriden_lines": 0
+    },
+    "b37b86070863c58d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c65cd736-d0a8-4345-aa8e-998d446ec157",
+        "model": "default"
+      },
+      "human_author": "panxiao <panxiao@cvte.com>",
+      "messages": [],
+      "total_additions": 101,
+      "total_deletions": 18,
+      "accepted_lines": 77,
+      "overriden_lines": 10
+    }
+  }
+}
